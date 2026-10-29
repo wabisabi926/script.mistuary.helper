@@ -62,7 +62,14 @@ HTTP 全部 mock，不依赖网络、不依赖 Emby。本地调试：
 # 改 addon.xml / resources/ 需要重启
 ```
 
-架构与契约见皮肤仓库的 `docs/helper-plugin-plan.md`。
+文档在 [`docs/`](docs/)：
+
+| 文件 | 内容 |
+|---|---|
+| [`docs/roadmap.md`](docs/roadmap.md) | 进度表、里程碑验收与回退 |
+| [`docs/architecture.md`](docs/architecture.md) | 模块职责、数据流、设计原则 |
+| [`docs/contract.md`](docs/contract.md) | 与皮肤的契约（参数、属性、降级表） |
+| [`docs/testing.md`](docs/testing.md) | 单测覆盖 + 实机验证清单 |
 
 ## 许可
 

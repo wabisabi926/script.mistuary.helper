@@ -1,0 +1,136 @@
+# 与皮肤的契约
+
+> 本文是**插件与皮肤之间的接口约定**。改任何一方的调用方式前先改这里。
+> 皮肤仓库里的 `docs/helper-plugin-plan.md` 是本文的摘要，**以本文为准**。
+
+## 一、可选安装
+
+插件是**可选**的。`addon.xml` 不写 `<import addon="script.mistuary.helper"/>`——
+写了就变成硬依赖，没装插件的用户整个皮肤加载失败。
+
+皮肤只做软探测：
+
+```xml
+<expression name="helper_ready">System.AddonIsEnabled(script.mistuary.helper)</expression>
+```
+
+注意是 **`AddonIsEnabled`** 不是 `AddonIsInstalled`：用户装了但禁用了，等同没装。
+
+## 二、调用方式
+
+### 2.1 搜索（返回目录）
+
+```
+plugin://script.mistuary.helper/?mode=search&type=movies&query=<搜索词>
+plugin://script.mistuary.helper/?mode=search&type=shows&query=<搜索词>
+```
+
+| 参数 | 值 | 说明 |
+|---|---|---|
+| `mode` | `search` | 必填 |
+| `type` | `movies` / `shows` | 必填，对应 Emby 的 `Movie` / `Series` |
+| `offset` | 整数 | 可选，分页用 |
+| `query` | 任意文本 | **必须是最后一个参数** |
+
+**`query` 放最后是硬约束**：插件用 `raw.split("query=", 1)` 取值，
+这样中文、`&`、`?`、`=` 都不会被截断。已知限制：`#` 会被 Kodi 当锚点截掉，无法绕开。
+
+### 2.2 动作（无界面）
+
+```
+RunScript(script.mistuary.helper,action=rating,type=movie,dbid=<Kodi 库 id>)
+RunScript(script.mistuary.helper,action=techflags,dbid=<剧集 id>)
+```
+
+`action=rating`（P1）写窗口属性，`action=techflags`（P2）写条目属性。
+
+## 三、插件写什么
+
+### 3.1 窗口属性（豆瓣评分，P1）
+
+写 `Window(home)` = 窗口 id **10000**：
+
+| 属性 | 示例 | 说明 |
+|---|---|---|
+| `Mistuary.Rating.Douban` | `8.6` | 0–10，一位小数 |
+| `Mistuary.Rating.Votes` | `123456` | 票数，可能为空 |
+| `Mistuary.Rating.FetchedAt` | `1793000000` | epoch，皮肤可用来判过期 |
+| `Mistuary.Rating.Status` | `ok` / `missing` / `error` | **皮肤只在 `ok` 时显示** |
+
+### 3.2 条目属性（代表集标识，P2）
+
+写在 ListItem 上：
+
+```
+TvShowRepresentative.VideoResolution
+TvShowRepresentative.HdrType / HdrDetail
+TvShowRepresentative.VideoCodec / AudioCodec / AudioChannels
+```
+
+皮肤的 `VideoTechnicalFlagsByPrefix` 已有这组分支，**皮肤侧 0 改动**。
+
+限制：只对插件自己生成的列表有效。Kodi 库里的行拿不到 ListItem 引用。
+
+## 四、降级表
+
+**装了就多，不装就少。每一项都有明确的"没有插件"状态，且那个状态是当前已有行为。**
+
+| 功能 | 装了插件 | 没装 / 禁用 / 版本低 |
+|---|---|---|
+| 搜索：中文标题 / 原名 | Emby 服务端，与官方 App 一致 | 本地 XSP（`contains`） |
+| 搜索：首字母（`HZ` / `S`） | 服务端 | 本地 XSP（`startswith`） |
+| 搜索：演员 / 导演 / 类型 | ✅ | ❌ 没有（1.2.0 起本地已移除） |
+| 搜索：全拼 / 别名 / 分词 | ✅ | ❌ 没有（本地没有分词器） |
+| 详情页豆瓣胶囊 | ✅ 显示 | 整行不显示，其余评分胶囊照常 |
+| 剧集代表集技术标识 | 插件写属性 | 皮肤自己的 `ListItemAbsolute(0)` 推断，**行为不变** |
+| 启动 / 播放 / 设置 | 不受影响 | 不受影响 |
+
+## 五、四条硬约束
+
+1. **皮肤侧只加分支，不替换**：新条件写进已有 `<variable>`，原来那行无条件 `<value>` 永远留在最后。
+2. **任何分支都必须有"未装"兜底，且兜底是当前已有行为**，不是空白。
+3. **插件返回空 / 报错 / 超时**时，皮肤按"没装"处理（属性为空就隐藏，容器空就回退），**不弹错误框**。
+4. **设置开关 `helper_search` 默认开，但未装插件时整行隐藏**——免得用户看到一个拨不动的开关。
+
+## 六、皮肤侧写法
+
+```xml
+<!-- 1. 探测 -->
+<expression name="helper_ready">System.AddonIsEnabled(script.mistuary.helper)</expression>
+
+<!-- 2. 路径二选一：服务端优先，本地兜底（原值永远在最后） -->
+<variable name="NaraSearchMoviesPathVar">
+    <value condition="$EXP[helper_ready] + Skin.HasSetting(helper_search)">plugin://script.mistuary.helper/?mode=search&amp;type=movies&amp;query=</value>
+    <value>library://video/movies/...</value>
+</variable>
+```
+
+服务端模式下**不要**给容器加 `sortby="sorttitle"`，否则会把服务端的相关度排序覆盖成字母序。
+
+## 七、版本契约
+
+| 皮肤功能 | 最低插件版本 |
+|---|---|
+| 服务端搜索 | 0.1.0 |
+| 详情页豆瓣 | 0.2.0 |
+| 代表集标识 | 0.3.0 |
+
+皮肤可读 `System.AddonVersion(script.mistuary.helper)` 判断；低于要求按"未装"处理，
+避免用户装了早期测试版却拿到半截数据。
+
+## 八、一个必须写进用户文档的坑
+
+Kodi 的 `<include condition="...">` 和容器的 `<content>` 都是**加载时求值**的。
+
+所以**装完 / 卸载插件后必须重载皮肤**（设置 → 界面 → 皮肤 → 重新加载），
+新分支才生效。不写这句，用户会以为插件没起作用。
+
+卸载后回退则是**立即**的——探测是每次渲染求值，不是缓存。
+
+## 九、插件不做什么
+
+- 不写 Kodi 媒体库
+- 不写皮肤设置
+- 不改用户文件
+- 不常驻后台（没有 `service.py`）
+- 不做播放代理 / 转码 / 字幕下载（Emby 插件在做）
