@@ -1,0 +1,85 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: script.mistuary.helper 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en_GB\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgctxt "#32000"
+msgid "General"
+msgstr "General"
+
+msgctxt "#32001"
+msgid "Emby server ID (leave empty for the first one)"
+msgstr "Emby server ID (leave empty for the first one)"
+
+msgctxt "#32002"
+msgid "Items per query"
+msgstr "Items per query"
+
+msgctxt "#32003"
+msgid "Search cache (seconds)"
+msgstr "Search cache (seconds)"
+
+msgctxt "#32004"
+msgid "Fetch Douban ratings"
+msgstr "Fetch Douban ratings"
+
+msgctxt "#32005"
+msgid "Write debug log"
+msgstr "Write debug log"
+
+msgctxt "#32010"
+msgid "Maintenance"
+msgstr "Maintenance"
+
+msgctxt "#32011"
+msgid "Clear cache"
+msgstr "Clear cache"
+
+msgctxt "#32012"
+msgid "Cache stores search results and ratings only, never your token."
+msgstr "Cache stores search results and ratings only, never your token."
+
+msgctxt "#32013"
+msgid "Changing settings here takes effect on the next call, no restart needed."
+msgstr "Changing settings here takes effect on the next call, no restart needed."
+
+msgctxt "#32020"
+msgid "Open this from the skin, or use the add-on settings."
+msgstr "Open this from the skin, or use the add-on settings."
+
+msgctxt "#32021"
+msgid "No Emby server found. Install and sign in to the Emby add-on first."
+msgstr "No Emby server found. Install and sign in to the Emby add-on first."
+
+msgctxt "#32022"
+msgid "Type something to search."
+msgstr "Type something to search."
+
+msgctxt "#32023"
+msgid "Emby sign-in expired. Reconnect in the Emby add-on."
+msgstr "Emby sign-in expired. Reconnect in the Emby add-on."
+
+msgctxt "#32024"
+msgid "Emby server unreachable. Check the network or server address."
+msgstr "Emby server unreachable. Check the network or server address."
+
+msgctxt "#32025"
+msgid "Emby returned an error (HTTP {0})."
+msgstr "Emby returned an error (HTTP {0})."
+
+msgctxt "#32026"
+msgid "Nothing found for “{0}”."
+msgstr "Nothing found for “{0}”."
+
+msgctxt "#32027"
+msgid "Load more…"
+msgstr "Load more…"
+
+msgctxt "#32028"
+msgid "Cache cleared."
+msgstr "Cache cleared."

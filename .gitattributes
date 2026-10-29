@@ -1,0 +1,6 @@
+# 统一 LF：Kodi 官方仓库的提交规范要求 LF 行尾。
+# 本机 core.autocrlf=true 会把工作区检出成 CRLF，所以显式钉住。
+* text=auto eol=lf
+
+*.pyc binary
+*.zip binary

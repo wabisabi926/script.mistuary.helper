@@ -1,0 +1,85 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: script.mistuary.helper 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: zh_CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgctxt "#32000"
+msgid "General"
+msgstr "常规"
+
+msgctxt "#32001"
+msgid "Emby server ID (leave empty for the first one)"
+msgstr "Emby 服务器 ID（留空用第一个）"
+
+msgctxt "#32002"
+msgid "Items per query"
+msgstr "每次查询条数"
+
+msgctxt "#32003"
+msgid "Search cache (seconds)"
+msgstr "搜索缓存（秒）"
+
+msgctxt "#32004"
+msgid "Fetch Douban ratings"
+msgstr "获取豆瓣评分"
+
+msgctxt "#32005"
+msgid "Write debug log"
+msgstr "写调试日志"
+
+msgctxt "#32010"
+msgid "Maintenance"
+msgstr "维护"
+
+msgctxt "#32011"
+msgid "Clear cache"
+msgstr "清空缓存"
+
+msgctxt "#32012"
+msgid "Cache stores search results and ratings only, never your token."
+msgstr "缓存只存搜索结果和评分，不含令牌。"
+
+msgctxt "#32013"
+msgid "Changing settings here takes effect on the next call, no restart needed."
+msgstr "这里的改动下次调用即生效，不用重启。"
+
+msgctxt "#32020"
+msgid "Open this from the skin, or use the add-on settings."
+msgstr "请从皮肤进入，或在「我的插件」里打开本插件的设置。"
+
+msgctxt "#32021"
+msgid "No Emby server found. Install and sign in to the Emby add-on first."
+msgstr "没有找到 Emby 服务器配置，请先安装并登录 Emby 插件。"
+
+msgctxt "#32022"
+msgid "Type something to search."
+msgstr "请输入搜索词。"
+
+msgctxt "#32023"
+msgid "Emby sign-in expired. Reconnect in the Emby add-on."
+msgstr "Emby 登录已失效，请在 Emby 插件里重新连接。"
+
+msgctxt "#32024"
+msgid "Emby server unreachable. Check the network or server address."
+msgstr "Emby 服务端不可达，请检查网络或服务器地址。"
+
+msgctxt "#32025"
+msgid "Emby returned an error (HTTP {0})."
+msgstr "Emby 返回错误（HTTP {0}）。"
+
+msgctxt "#32026"
+msgid "Nothing found for “{0}”."
+msgstr "没有找到「{0}」。"
+
+msgctxt "#32027"
+msgid "Load more…"
+msgstr "加载更多…"
+
+msgctxt "#32028"
+msgid "Cache cleared."
+msgstr "缓存已清空。"

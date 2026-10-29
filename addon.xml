@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="script.mistuary.helper"
+       name="Mistuary Helper"
+       version="0.1.0"
+       provider-name="wabisabi926">
+    <requires>
+        <!-- Kodi 19+ 的 Python 3 接口。皮肤侧要求 Kodi 21+，这里放宽到 19 不影响。 -->
+        <import addon="xbmc.python" version="3.0.1"/>
+    </requires>
+    <extension point="xbmc.python.pluginsource" library="default.py">
+        <!-- provides=video：搜索结果要作为视频目录被 Kodi 识别。
+             没有它，plugin:// 路径仍能打开，但 content type 未知，
+             皮肤容器的 Content(movies) 判断会失效。 -->
+        <provides>video</provides>
+    </extension>
+    <extension point="xbmc.addon.metadata">
+        <summary lang="en_gb">Server-side search and rating bridge for the Mistuary skin</summary>
+        <summary lang="zh_cn">Mistuary 皮肤的服务端搜索与评分桥</summary>
+        <description lang="en_gb">Optional add-on. Search uses the Emby server, so Chinese, pinyin, aliases and cast names work the same way as in the Emby app. Without it the skin falls back to its own local search. Nothing is written to your library or settings.</description>
+        <description lang="zh_cn">可选插件。搜索走 Emby 服务端，中文、全拼、别名和演员名与 Emby 官方 App 一致；不装时皮肤回退到自带的本地搜索。不改媒体库、不改皮肤设置。</description>
+        <disclaimer lang="zh_cn">只在本地读取 Emby 插件的服务器配置，令牌不会写入日志或缓存。</disclaimer>
+        <language></language>
+        <platform>all</platform>
+        <license>GPL-3.0-only</license>
+        <forum></forum>
+        <website></website>
+        <source></source>
+    </extension>
+</addon>

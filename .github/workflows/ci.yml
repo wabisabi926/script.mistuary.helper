@@ -1,0 +1,109 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Unit tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Compile check
+        # 语法错误在 Kodi 里只表现为"插件打不开"，这里提前拦住
+        run: python -m compileall -q default.py lib
+
+  build:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Read version
+        id: meta
+        run: |
+          set -euo pipefail
+          VERSION="$(python -c "import xml.etree.ElementTree as ET; print(ET.parse('addon.xml').getroot().get('version'))")"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "版本: ${VERSION}"
+
+      - name: Check version change
+        id: check
+        run: |
+          set -euo pipefail
+          NEW="${{ steps.meta.outputs.version }}"
+          BEFORE="${{ github.event.before }}"
+          if [ -z "${BEFORE}" ] || [ "${BEFORE}" = "0000000000000000000000000000000000000000" ]; then
+            BEFORE="HEAD^"
+          fi
+          OLD="$(git show "${BEFORE}:addon.xml" 2>/dev/null \
+            | python -c 'import sys,xml.etree.ElementTree as ET; print(ET.fromstring(sys.stdin.read()).get("version"))' \
+            || echo "")"
+          echo "旧版本: ${OLD:-<无>} / 新版本: ${NEW}"
+          if [ "${OLD}" = "${NEW}" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check release exists
+        id: gate
+        if: steps.check.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "v${{ steps.meta.outputs.version }}" >/dev/null 2>&1; then
+            echo "该版本已发布过，跳过"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Package
+        if: steps.check.outputs.changed == 'true' && steps.gate.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          NAME="script.mistuary.helper-${{ steps.meta.outputs.version }}"
+          mkdir -p "build/${NAME}"
+          # 只带运行时需要的：入口、lib、resources、元数据
+          cp addon.xml default.py changelog.txt LICENSE README.md "build/${NAME}/"
+          cp -r lib resources "build/${NAME}/"
+          find "build/${NAME}" -name '__pycache__' -type d -prune -exec rm -rf {} +
+          find "build/${NAME}" -name '*.pyc' -delete
+          cd build
+          zip -qr "${NAME}.zip" "${NAME}"
+          echo "包内容:"
+          unzip -l "${NAME}.zip" | tail -20
+
+      - name: Publish release
+        if: steps.check.outputs.changed == 'true' && steps.gate.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          NAME="script.mistuary.helper-${{ steps.meta.outputs.version }}"
+          # 取 changelog 第一段（版本号开头到下一个版本号之前）。
+          # 用 awk 而不是 python heredoc：heredoc 内容必须顶格写，
+          # 会破坏 YAML 的 block scalar 缩进（本地踩过，报 ScannerError）。
+          awk '/^[0-9]+\.[0-9]+\.[0-9]+/{n++} n==1' changelog.txt > notes.md
+          if [ ! -s notes.md ]; then
+            echo "（changelog.txt 里没有对应段落）" > notes.md
+          fi
+          gh release create "v${{ steps.meta.outputs.version }}" \
+            "build/${NAME}.zip" \
+            --title "v${{ steps.meta.outputs.version }}" \
+            --notes-file notes.md

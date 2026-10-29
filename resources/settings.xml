@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<settings>
+    <category label="32000">
+        <!-- 留空 = 用第一个 Emby 服务器。用户有多台时填 servers_*.json 里的 ServerId。 -->
+        <setting id="server_id" type="text" label="32001" default="" />
+        <setting id="page_size" type="number" label="32002" default="100" />
+        <setting id="cache_ttl" type="number" label="32003" default="300" />
+        <setting id="douban_enabled" type="bool" label="32004" default="true" />
+        <setting id="debug_log" type="bool" label="32005" default="false" />
+    </category>
+    <category label="32010">
+        <setting id="clear_cache" type="action" label="32011"
+                 action="RunPlugin(plugin://script.mistuary.helper/?action=clear_cache)" />
+        <setting type="lsep" label="32012" />
+        <setting type="text" label="32013" enable="false" />
+    </category>
+</settings>
