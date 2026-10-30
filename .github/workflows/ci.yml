@@ -6,6 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# gh release create 需要写权限；新仓库默认 token 可能是只读
+permissions:
+  contents: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
