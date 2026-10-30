@@ -116,6 +116,20 @@ class BuildSearchUrlTest(unittest.TestCase):
         self.assertEqual(handle, -1)
         self.assertEqual(args, "action=rating&type=movie&dbid=42")
 
+    def test_kodi_resume_meta_is_dropped(self):
+        """Kodi 21+ 会在插件目录调用末尾多塞一个 `resume:false`。
+
+        它不是参数；拼进 raw 会让 `parse()` 把 "query= 之后的整段" 当成搜索词，
+        搜 `yw` 变成搜 `yw&resume:false` —— 一个结果都没有（2026-10-30 实测）。
+        """
+        handle, args = router.argv_to_args([
+            "plugin://script.mistuary.helper/", "11",
+            "?mode=search&type=movies&query=yw", "resume:false",
+        ])
+        self.assertEqual(handle, 11)
+        self.assertEqual(args, "?mode=search&type=movies&query=yw")
+        self.assertEqual(router.parse(args).query, "yw")
+
 
 if __name__ == "__main__":
     unittest.main()

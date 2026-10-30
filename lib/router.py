@@ -58,13 +58,20 @@ def argv_to_args(argv) -> tuple:
     - RunScript：`[script_path, "action=rating", "type=movie", ...]` → 没有 handle。
 
     RunScript 的逗号已经被 Kodi 拆成多个 argv，这里用 `&` 拼回去。
+
+    **Kodi 21+ 的插件目录调用会在末尾多塞一个 `resume:false`**（断点续播提示），
+    它不是我们的参数。以前这里照单全收拼进 raw，`parse()` 又取"query= 之后的整段"
+    当搜索词 —— 结果搜 `yw` 时插件收到的是 `yw&resume:false`，Emby 查不到任何东西，
+    列表里显示「没有找到「yw&resume:false」」。2026-10-30 实测确认。
     """
     argv = list(argv or [])
+    # Kodi 自己加的元参数，前缀匹配即可；将来 Kodi 再加同类参数也一并丢掉
+    KODI_META = ("resume:",)
     if len(argv) > 1 and str(argv[1]).isdigit():
-        parts = [a for a in argv[2:] if a]
+        parts = [a for a in argv[2:] if a and not a.startswith(KODI_META)]
         handle = int(argv[1])
     else:
-        parts = [a for a in argv[1:] if a]
+        parts = [a for a in argv[1:] if a and not a.startswith(KODI_META)]
         handle = -1
     # 某些调用方把整串参数塞进一个 argv，逗号分隔；值里不会再有逗号（标题走窗口属性）
     if len(parts) == 1 and "," in parts[0] and "&" not in parts[0]:
