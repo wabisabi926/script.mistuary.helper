@@ -3,7 +3,7 @@
 > 目标：**没有 Kodi、没有 Emby、没有网络**也能验证大部分逻辑。
 > 剩下那部分（播放地址、搜索结果正确性）只能实机验，列在 §3。
 
-## 1. 单测（`tests/`，72 项）
+## 1. 单测（`tests/`，82 项）
 
 ```bash
 python -m unittest discover -s tests -p 'test_*.py'
@@ -13,11 +13,12 @@ HTTP 全部 mock，不依赖网络和 Emby。CI 每次 push 都跑。
 
 | 文件 | 覆盖什么 | 项数 |
 |---|---|---|
-| `test_router.py` | 参数解析：中文、`&`、`?`、`=`、空值、重复键、负数 offset、超长 query、URL 往返 | 15 |
-| `test_douban.py` | IMDb 识别、dbid 回退、双通道回退、失败缓存、窗口属性、关闭开关 | 14 |
-| `test_cache.py` | 命中、TTL 过期、损坏 JSON、缺 `ts`、空列表也缓存、只删 `.json`、key 稳定性 | 9 |
-| `test_config.py` | 服务器发现、地址优先级、`ServerRemoved` 跳过、缺 token、坏 JSON、按 id 选、未知 id 回退、repr 不泄露 token | 12 |
-| `test_emby.py` | 字段映射、`Series` 是文件夹、缺字段不崩、结果不含 token、图片 URL、搜索参数、缓存命中不打 HTTP、空结果缓存、401 / 超时 / 未知类型 / 坏 JSON 的错误映射 | 22 |
+| `test_router.py` | 参数解析：中文、`&`、`?`、`=`、空值、重复键、负数 offset、超长 query、URL 往返、`resume:false` 元参数 | 19 |
+| `test_douban.py` | IMDb 识别、dbid 回退、双通道回退、失败缓存、窗口属性、关闭开关 | 19 |
+| `test_cache.py` | 命中、TTL 过期、损坏 JSON、缺 `ts`、空列表也缓存、只删 `.json`、key 稳定性 | 10 |
+| `test_config.py` | 服务器发现、地址优先级、`ServerRemoved` 跳过、缺 token、坏 JSON、按 id 选、未知 id 回退、repr 不泄露 token | 13 |
+| `test_emby.py` | 字段映射、`Series` 是文件夹、缺字段不崩、结果不含 token、图片 URL、搜索参数、缓存命中不打 HTTP、空结果缓存、401 / 超时 / 未知类型 / 坏 JSON 的错误映射 | 19 |
+| `test_default.py` | action 入口：`plugin://` 有 handle 必须 `endOfDirectory`；`RunScript` handle=-1 不调 | 2 |
 
 ### 几条值得单独说的用例
 
@@ -32,6 +33,13 @@ HTTP 全部 mock，不依赖网络和 Emby。CI 每次 push 都跑。
 **`test_empty_list_is_cached`** —— 空结果也要缓存，否则用户连续打字每次都打服务端。
 
 **`test_unknown_id_falls_back_to_first`** —— 设置里钉的服务器被删了，退回第一个而不是整个失效。
+
+**未覆盖**：`http.py` / `kodi.py` / `log.py` / `i18n.py` 没有直接单测；
+`kodi.py` 的目录收尾通过 `test_default.py` 的 fake `xbmcplugin` 间接覆盖。
+
+> ⚠️ `test_emby.py` 的夹具用的是 `PrimaryImageTag`，而真实 Emby 搜索响应返回
+> `ImageTags: {Primary: ...}`。所以“搜索结果没有封面”这个 bug 没有被单测抓到；
+> 修复时要同步改夹具并加一条真实字段的用例。
 
 ## 2. 静态检查
 
@@ -90,7 +98,7 @@ print([i["name"] for i in emby.search(s, "RZD", "movies", limit=5, ttl=0)])
 
 ### 3.2 搜索（M1b / M1c）
 
-前置：插件**已启用** + 重载皮肤 + 皮肤设置 → 媒体里能看到「使用 Emby 服务端搜索」。
+前置：插件**已启用**（2026-10-30 复查 `enabled=1`）+ 重载皮肤 + 皮肤设置 → 媒体里能看到「使用 Emby 服务端搜索」。
 
 - [ ] `RZD`：出现 3 条，第一条是「让子弹飞」（服务端）；关掉开关后只剩 1 条（本地）
 - [ ] `rangzidanfei` / `让子弹飞`：1 条
@@ -111,6 +119,9 @@ print([i["name"] for i in emby.search(s, "RZD", "movies", limit=5, ttl=0)])
 
 ### 3.4 豆瓣评分（M2）
 
+> 2026-10-30 已有一次成功取分记录（`tt2567026` → 7.1，见 helper 缓存）；
+> 下面保留为发版回归清单。
+
 - [ ] 有 IMDb id 的电影：胶囊显示分数，与豆瓣网页一致
 - [ ] 没有 IMDb id：胶囊隐藏，不显示 `0.0`
 - [ ] 断网：胶囊隐藏，不弹错误框
@@ -118,8 +129,18 @@ print([i["name"] for i in emby.search(s, "RZD", "movies", limit=5, ttl=0)])
 
 ### 3.5 代表集标识（M3）
 
+M3 明确暂缓，以下不验收。
+
 - [ ] 首页 / 搜索的剧集卡显示 4K / HDR / 音轨，与详情页一致
 - [ ] 没有分集的剧集：不显示，不报错
+
+### 3.6 已知未通过的实机项（2026-10-30）
+
+- [ ] **搜索列表没有封面**：Emby 返回 `ImageTags.Primary`，插件读 `PrimaryImageTag`，
+      `image_tag` 为空。修复方向见 `HANDOVER.md` §已知问题。
+- [ ] **搜索页背景没有兜底图**：非空查询且条目没有 fanart 时，皮肤侧
+      `NaraSearchBackground` 只剩纯黑层；这是皮肤问题，不是插件能补的。
+- [ ] **搜索结果点击播放**：`mode=play` 尚未实机验证。
 
 ## 4. 日志检查
 

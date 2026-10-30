@@ -35,6 +35,10 @@ plugin://script.mistuary.helper/?mode=search&type=shows&query=<搜索词>
 **`query` 放最后是硬约束**：插件用 `raw.split("query=", 1)` 取值，
 这样中文、`&`、`?`、`=` 都不会被截断。已知限制：`#` 会被 Kodi 当锚点截掉，无法绕开。
 
+Kodi 21+ 的目录调用还会在 argv 末尾额外传一个 `resume:false`；0.2.1 起插件会丢弃
+所有以 `resume:` 开头的 Kodi 元参数。调用方仍必须把 `query` 放最后，**不要在它后面
+再追加业务参数**——追加的内容会被当成搜索词（2026-10-30 实测）。
+
 ### 2.1.1 当前实际能力（2026-10-30 实测）
 
 | 能力 | 状态 | 说明 |
@@ -58,7 +62,10 @@ RunScript(script.mistuary.helper,action=rating,type=movie,dbid=<Kodi 库 id>)
 RunScript(script.mistuary.helper,action=techflags,dbid=<剧集 id>)
 ```
 
-`action=rating`（0.2.0）写窗口属性，`action=techflags`（P3）写条目属性。
+`action=rating`（0.2.0+）写窗口属性；`action=techflags`（M3）暂缓，当前只记日志。
+
+0.2.2 起，通过 `plugin://...?action=...` 调用时入口会补 `endOfDirectory`，不会再报
+`CGUIMediaWindow::GetDirectory(...) failed`；`RunScript` 没有 handle，不会触发收尾。
 
 **参数拼接**：`RunScript(addon,action=rating,type=movie,dbid=…,imdb=…)` 里的逗号会被 Kodi
 拆成多个 argv；入口用 `router.argv_to_args()` 判断布局并拼回：
@@ -80,7 +87,7 @@ RunScript(script.mistuary.helper,action=techflags,dbid=<剧集 id>)
 
 ## 三、插件写什么
 
-### 3.1 窗口属性（豆瓣评分，P1）
+### 3.1 窗口属性（豆瓣评分，M2，0.2.0）
 
 写 `Window(home)` = 窗口 id **10000**：
 
@@ -101,7 +108,7 @@ RunScript(script.mistuary.helper,action=techflags,dbid=<剧集 id>)
 插件只在拿不到 IMDb id 时读这两个属性，按标题搜豆瓣并要求标题完全一致、
 年份一致（给了年份时）。
 
-### 3.2 条目属性（代表集标识，P2）
+### 3.2 条目属性（代表集标识，M3 暂缓）
 
 写在 ListItem 上：
 
@@ -123,8 +130,9 @@ TvShowRepresentative.VideoCodec / AudioCodec / AudioChannels
 |---|---|---|
 | 搜索：中文标题 / 原名 | Emby 服务端，与官方 App 一致 | 本地 XSP（`contains`） |
 | 搜索：首字母（`HZ` / `S`） | 服务端 | 本地 XSP（`startswith`） |
-| 搜索：演员 / 导演 / 类型 | ✅ | ❌ 没有（1.2.0 起本地已移除） |
-| 搜索：全拼 / 别名 / 分词 | ✅ | ❌ 没有（本地没有分词器） |
+| 搜索：全拼 / 原名 | ✅ | ❌ 没有（本地没有拼音库） |
+| 搜索：演员 / 导演 / 类型 | ❌ 未实现（M1d 暂缓） | ❌ 没有（1.2.0 起本地已移除） |
+| 搜索：别名 / 分词 | ❌ 未实现 | ❌ 没有（本地没有分词器） |
 | 详情页豆瓣胶囊 | ✅ 显示 | 整行不显示，其余评分胶囊照常 |
 | 剧集代表集技术标识 | 插件写属性 | 皮肤自己的 `ListItemAbsolute(0)` 推断，**行为不变** |
 | 启动 / 播放 / 设置 | 不受影响 | 不受影响 |
@@ -134,17 +142,17 @@ TvShowRepresentative.VideoCodec / AudioCodec / AudioChannels
 1. **皮肤侧只加分支，不替换**：新条件写进已有 `<variable>`，原来那行无条件 `<value>` 永远留在最后。
 2. **任何分支都必须有"未装"兜底，且兜底是当前已有行为**，不是空白。
 3. **插件返回空 / 报错 / 超时**时，皮肤按"没装"处理（属性为空就隐藏，容器空就回退），**不弹错误框**。
-4. **设置开关 `helper_search` 默认开，但未装插件时整行隐藏**——免得用户看到一个拨不动的开关。
+4. **设置开关 `helper_search_off` 反向命名（默认开），未装插件时整行隐藏**——免得用户看到一个拨不动的开关。
 
 ## 六、皮肤侧写法
 
 ```xml
-<!-- 1. 探测 -->
-<expression name="helper_ready">System.AddonIsEnabled(script.mistuary.helper)</expression>
+<!-- 1. 探测：插件和 Emby 都启用才走服务端 -->
+<expression name="helper_search_ready">System.AddonIsEnabled(script.mistuary.helper) + System.AddonIsEnabled(plugin.service.emby-next-gen)</expression>
 
 <!-- 2. 路径二选一：服务端优先，本地兜底（原值永远在最后） -->
 <variable name="NaraSearchMoviesPathVar">
-    <value condition="$EXP[helper_ready] + Skin.HasSetting(helper_search)">plugin://script.mistuary.helper/?mode=search&amp;type=movies&amp;query=</value>
+    <value condition="$EXP[helper_search_ready] + !Skin.HasSetting(helper_search_off) + !String.IsEmpty(Control.GetLabel(16999).index(1))">plugin://script.mistuary.helper/?mode=search&amp;type=movies&amp;query=$INFO[Control.GetLabel(16999).index(1)]</value>
     <value>library://video/movies/...</value>
 </variable>
 ```
@@ -155,12 +163,13 @@ TvShowRepresentative.VideoCodec / AudioCodec / AudioChannels
 
 | 皮肤功能 | 最低插件版本 |
 |---|---|
-| 服务端搜索 | 0.1.0 |
+| 服务端搜索 | 0.1.0（0.2.1 修复 `resume:false` 污染搜索词） |
 | 详情页豆瓣 | 0.2.0 |
-| 代表集标识 | 0.3.0 |
+| 代表集标识 | 不适用（M3 暂缓，不承诺版本） |
 
-皮肤可读 `System.AddonVersion(script.mistuary.helper)` 判断；低于要求按"未装"处理，
-避免用户装了早期测试版却拿到半截数据。
+皮肤目前**不做版本比较**（Kodi 没有可靠的版本比较表达式），只做
+`System.AddonIsEnabled` 软探测；旧版插件对新增功能什么都不写，皮肤自然隐藏，
+等价于没装。最低版本只写在 README / Release 说明里。
 
 ## 八、一个必须写进用户文档的坑
 
@@ -178,3 +187,14 @@ Kodi 的 `<include condition="...">` 和容器的 `<content>` 都是**加载时�
 - 不改用户文件
 - 不常驻后台（没有 `service.py`）
 - 不做播放代理 / 转码 / 字幕下载（Emby 插件在做）
+
+## 十、已知问题（2026-10-30）
+
+1. **搜索结果没有封面**：Emby `/Items?searchTerm=` 返回的是 `ImageTags.Primary`，
+   插件当前只读 `PrimaryImageTag`，所以 `image_tag` 为空。0.2.2 还没修；
+   修复方向是在 `normalize()` 里回退读 `ImageTags.Primary`，并同步改测试夹具。
+2. **搜索页背景没有兜底图**：皮肤侧问题。非空查询且条目没有 fanart 时，
+   `NaraSearchBackground` 的纯黑层是唯一背景；插件不负责皮肤背景。
+3. **搜索结果点击播放**：`mode=play` 路径尚未实机验证，直链兜底未实现。
+4. **演员 / 导演 / 类型 / 别名 / 分词**：未实现，M1d 暂缓。
+5. **代表集技术标识**：M3 明确不做。

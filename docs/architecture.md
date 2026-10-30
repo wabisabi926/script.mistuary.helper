@@ -22,12 +22,12 @@ script.mistuary.helper/
 │   ├── i18n.py                本地化（带中文兜底）
 │   ├── emby.py                Emby 客户端 + 结果映射 + 渲染
 │   ├── kodi.py                ListItem 构造、窗口属性桥
-│   ├── douban.py              P1：豆瓣取分（空壳）
-│   └── techflags.py           P2：代表集标识（空壳）
+│   ├── douban.py              M2：豆瓣取分
+│   └── techflags.py           M3：代表集标识（暂缓，空壳）
 ├── resources/
 │   ├── settings.xml
 │   └── language/{en_gb,zh_cn}/strings.po
-└── tests/                     4 个文件，58 项
+└── tests/                     6 个文件，82 项
 ```
 
 ## 数据流
@@ -46,8 +46,8 @@ default.py ── router.parse() ──> Request(mode, type, query, offset…)
    │                     ├─ cache.put()            只存 PrimaryImageTag
    │                     └─ kodi.apply_video_info() + addDirectoryItem
    │
-   ├─ action=rating ──> douban.run_action()       （P1）
-   ├─ action=techflags ─> techflags.run_action()  （P2）
+   ├─ action=rating ──> douban.run_action()       （M2）
+   ├─ action=techflags ─> techflags.run_action()  （M3 暂缓）
    └─ action=clear_cache ─> cache.clear()
 ```
 
@@ -95,6 +95,8 @@ default.py ── router.parse() ──> Request(mode, type, query, offset…)
 | 空结果也缓存 | 用户连续打字时不必每次都打服务端；TTL 只有 5 分钟 |
 | 失败**不**缓存 | 一次网络抖动会锁死 5 分钟 |
 | 缓存写失败静默 | 缓存是优化不是功能，写不进去也要能正常返回结果 |
+| 过滤 Kodi 的 `resume:*` argv | Kodi 21+ 目录调用会额外传 `resume:false`；不丢弃会污染搜索词（0.2.1） |
+| action 模式目录收尾 | `plugin://...?action=...` 有 handle，必须 `endOfDirectory`；`RunScript` 的 handle=-1 不调（0.2.2） |
 
 ## Emby 服务器发现
 
@@ -113,6 +115,13 @@ ServerRemoved    bool，换过服务器后旧配置只置这个标记、不删�
 
 地址优先级 `ServerUrl → ManualAddress → LocalAddress → RemoteAddress`。
 **`ManualAddress` 不能漏**：用户手填覆盖时地址只写在这里，漏了会用错服务器。
+
+## 已知实现缺口
+
+- **搜索封面**：`normalize()` 只读 `raw["PrimaryImageTag"]`，而 Emby 实际返回
+  `raw["ImageTags"]["Primary"]`，所以搜索结果 `image_tag` 为空、列表没有海报。
+  这是 0.2.2 之后仍待修的问题，测试夹具也用了旧字段，未覆盖真实响应。
+- **播放地址**：`play_url()` 走 Emby 插件 `mode=play`，尚未实机验证。
 
 ## 日志
 

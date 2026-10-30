@@ -1,15 +1,16 @@
 # Mistuary Helper
 
 Mistuary 皮肤的**可选**配套插件。装了就多几个功能，不装皮肤照常工作。
+当前版本 **0.2.2**，82 项单测。
 
 | 功能 | 装了这个插件 | 不装 |
 |---|---|---|
 | 搜索：中文标题 / 原名 | Emby 服务端，与官方 App 一致 | 皮肤自带本地搜索（够用） |
+| 搜索：全拼 | ✅ | ❌ 没有 |
 | 搜索：首字母（`HZ` / `S`） | 服务端（子串匹配） | 本地（`startswith`） |
-| 搜索：**演员 / 导演 / 类型** | ❌ 暂缓（M1d） | ❌ 没有 |
-| 搜索：全拼 / 原名 | ✅ | ❌ 没有 |
+| 搜索：演员 / 导演 / 类型 | ❌ 暂缓（M1d） | ❌ 没有 |
 | 搜索：别名 / 分词 | ❌ 未实现 | ❌ 没有 |
-| 详情页豆瓣胶囊 | ✅（0.2.0，无 IMDb 时按标题 + 年份兜底） | 不显示 |
+| 详情页豆瓣胶囊 | ✅（0.2.0+，无 IMDb 时按标题 + 年份兜底） | 不显示 |
 | 剧集「代表集」技术标识 | ❌ 暂缓（M3，收益为零） | 皮肤自己推断，行为不变 |
 
 ## 安装
@@ -23,9 +24,10 @@ Mistuary 皮肤的**可选**配套插件。装了就多几个功能，不装皮�
 
 ## 前提
 
-- 已安装并登录 **Emby for Kodi Next Gen**（`plugin.service.emby-next-gen`）
-- 插件直接读它的 `addon_data/plugin.service.emby-next-gen/servers_*.json`，
+- **搜索**需要已安装并登录 **Emby for Kodi Next Gen**（`plugin.service.emby-next-gen`）；
+  插件直接读它的 `addon_data/plugin.service.emby-next-gen/servers_*.json`，
   **不用二次输入地址和令牌**
+- **豆瓣评分**不依赖 Emby：有 IMDb id 即可；没有 IMDb 时按标题 + 年份兜底
 
 ## 设置
 
@@ -49,6 +51,15 @@ Mistuary 皮肤的**可选**配套插件。装了就多几个功能，不装皮�
 从「我的插件」里直接删掉即可，皮肤下一帧就回到「少功能」状态，
 不需要重载皮肤（探测是每次渲染求值，不是缓存）。
 
+## 已知问题
+
+- **搜索结果没有封面**：Emby 搜索接口返回 `ImageTags.Primary`，插件当前只读
+  `PrimaryImageTag`，所以 `image_tag` 为空。根因与修复方向见
+  [`docs/HANDOVER.md`](docs/HANDOVER.md)。
+- **搜索页背景没有兜底图**：皮肤侧问题。非空查询且条目没有 fanart 时，
+  `NaraSearchBackground` 只剩纯黑层；见皮肤仓库 `docs/HANDOVER.md`。
+- **搜索结果点击播放**：`mode=play` 路径尚未实机验证；直链兜底未实现。
+
 ## 开发
 
 ```bash
@@ -67,10 +78,13 @@ HTTP 全部 mock，不依赖网络、不依赖 Emby。本地调试：
 
 | 文件 | 内容 |
 |---|---|
+| [`docs/HANDOVER.md`](docs/HANDOVER.md) | **接手先读**：现状、已知问题、发版与验证入口 |
 | [`docs/roadmap.md`](docs/roadmap.md) | 进度表、里程碑验收与回退 |
 | [`docs/architecture.md`](docs/architecture.md) | 模块职责、数据流、设计原则 |
 | [`docs/contract.md`](docs/contract.md) | 与皮肤的契约（参数、属性、降级表） |
 | [`docs/testing.md`](docs/testing.md) | 单测覆盖 + 实机验证清单 |
+| [`docs/troubleshooting.md`](docs/troubleshooting.md) | 搜索/豆瓣/日志/缓存的排查步骤 |
+| [`docs/release.md`](docs/release.md) | 版本号、CI 打包与发布流程 |
 
 ## 许可
 

@@ -19,10 +19,10 @@
         <provides>executable</provides>
     </extension>
     <extension point="xbmc.addon.metadata">
-        <summary lang="en_gb">Server-side search and rating bridge for the Mistuary skin</summary>
-        <summary lang="zh_cn">Mistuary 皮肤的服务端搜索与评分桥</summary>
-        <description lang="en_gb">Optional add-on. Search uses the Emby server, so Chinese, pinyin, aliases and cast names work the same way as in the Emby app. Without it the skin falls back to its own local search. Nothing is written to your library or settings.</description>
-        <description lang="zh_cn">可选插件。搜索走 Emby 服务端，中文、全拼、别名和演员名与 Emby 官方 App 一致；不装时皮肤回退到自带的本地搜索。不改媒体库、不改皮肤设置。</description>
+        <summary lang="en_gb">Server-side search and Douban rating bridge for the Mistuary skin</summary>
+        <summary lang="zh_cn">Mistuary 皮肤的服务端搜索与豆瓣评分桥</summary>
+        <description lang="en_gb">Optional add-on. Search uses the Emby server, so Chinese titles, original titles, full pinyin and initials work like in the Emby app. It also provides Douban ratings for the video info dialog. Without it the skin falls back to its own local search and hides the Douban capsule. Nothing is written to your library or settings.</description>
+        <description lang="zh_cn">可选插件。搜索走 Emby 服务端，支持中文标题、原名、全拼和首字母；详情页豆瓣评分也由它提供。不装时皮肤回退到自带的本地搜索，并隐藏豆瓣胶囊。不改媒体库、不改皮肤设置。</description>
         <disclaimer lang="zh_cn">只在本地读取 Emby 插件的服务器配置，令牌不会写入日志或缓存。</disclaimer>
         <language></language>
         <platform>all</platform>
