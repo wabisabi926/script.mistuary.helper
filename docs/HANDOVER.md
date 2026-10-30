@@ -7,7 +7,8 @@
 
 `script.mistuary.helper` 是 Mistuary 皮肤的**可选**配套插件，当前 **0.2.2**，
 82 项单测全绿，已发布 `v0.2.0` / `v0.2.1` / `v0.2.2`。
-搜索和豆瓣评分主路径已接在皮肤 `main`；剩余 M1c 实机验收和两个已确认的展示问题。
+搜索和豆瓣评分主路径已接在皮肤 `main`，**M1c 已于 2026-10-30 实机验收通过**（含播放）；
+剩余一个已确认的展示问题：搜索结果没有封面。
 
 ## 2. 当前能力
 
@@ -20,7 +21,7 @@
 | action 模式 | ✅ 0.2.2 | `plugin://...?action=...` 会补 `endOfDirectory`；`RunScript` handle=-1 不调 |
 | 演员 / 导演 / 类型 / 别名 / 分词 | ❌ | M1d 暂缓 |
 | 代表集技术标识 | ❌ | M3 明确不做，`techflags.py` 只记日志 |
-| 播放地址 | ⚠️ 未实机验证 | `mode=play` 已写，直链兜底未实现 |
+| 播放地址 | ✅ 实机通过 | `mode=play` 直连 Emby 插件，2026-10-30 验收；直链兜底不需要 |
 
 ## 3. 已修复的两个 Kodi 偶发问题
 
@@ -78,12 +79,13 @@ Kodi 日志报 `CGUIMediaWindow::GetDirectory(...) failed`。
 （例如 `special://skin/extras/backgrounds/primary.jpg`），或在 `16590` 的可见性外
 补一层 fallback。皮肤仓库 `docs/HANDOVER.md` 也有同样记录。
 
-### 4.3 播放地址未验证
+### 4.3 播放地址（已解决，2026-10-30）
 
 `lib/emby.py: play_url()` 走
-`plugin://plugin.service.emby-next-gen/?mode=play&item=…&server=…`。
-还没在实机点过搜索结果；如果不通，退路是
-`{base}/Videos/{Id}/stream?static=true&api_key=…`（会带 token，只在必要时启用）。
+`plugin://plugin.service.emby-next-gen/?mode=play&item=…&server=…`，
+实机点搜索结果可直接播放，**`play_url()` 不需要改**，
+`{base}/Videos/{Id}/stream?static=true&api_key=…` 这条直链兜底也不用做
+（它会带 token，本来就不想启用）。
 
 ### 4.4 其他
 
