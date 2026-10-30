@@ -31,7 +31,9 @@ RAW_ITEM = {
     "CriticRating": 90,
     "Overview": "民国年间，马邦德买官上任。",
     "RunTimeTicks": 132 * 6000000,
-    "PrimaryImageTag": "tag-abc",
+    # Emby 的 /Items?searchTerm= 实际返回 ImageTags.Primary，不是 PrimaryImageTag
+    "ImageTags": {"Primary": "tag-abc"},
+    "BackdropImageTags": ["bd-1"],
     "ProviderIds": {"Imdb": "tt1340507", "Tmdb": "44719"},
     "UserData": {"Played": False, "PlaybackPositionTicks": 0},
 }
@@ -57,6 +59,7 @@ class NormalizeTest(unittest.TestCase):
         self.assertEqual(item["year"], 0)
         self.assertEqual(item["runtime_min"], 0)
         self.assertEqual(item["image_tag"], "")
+        self.assertEqual(item["backdrop_tag"], "")
         self.assertEqual(item["imdb"], "")
 
     def test_none_userdata(self):
@@ -70,6 +73,35 @@ class NormalizeTest(unittest.TestCase):
         self.assertNotIn("api_key", repr(item))
 
 
+class ImageTagTest(unittest.TestCase):
+    def test_reads_image_tags_primary(self):
+        item = emby.normalize(dict(RAW_ITEM))
+        self.assertEqual(item["image_tag"], "tag-abc")
+
+    def test_prefers_legacy_primary_image_tag(self):
+        raw = dict(RAW_ITEM, PrimaryImageTag="legacy-tag")
+        self.assertEqual(emby.normalize(raw)["image_tag"], "legacy-tag")
+
+    def test_image_tags_not_a_dict_does_not_crash(self):
+        for bad in (None, "x", 3):
+            item = emby.normalize(dict(RAW_ITEM, ImageTags=bad))
+            self.assertEqual(item["image_tag"], "")
+
+    def test_backdrop_tag_takes_first(self):
+        item = emby.normalize(dict(RAW_ITEM, BackdropImageTags=["bd-1", "bd-2"]))
+        self.assertEqual(item["backdrop_tag"], "bd-1")
+
+    def test_backdrop_tag_empty_and_not_a_list(self):
+        self.assertEqual(emby.normalize(dict(RAW_ITEM, BackdropImageTags=[]))["backdrop_tag"], "")
+        self.assertEqual(emby.normalize(dict(RAW_ITEM, BackdropImageTags=None))["backdrop_tag"], "")
+
+    def test_cached_dict_has_no_url(self):
+        """缓存落盘的是 tag，不能是带 api_key 的地址。"""
+        item = emby.normalize(dict(RAW_ITEM))
+        self.assertNotIn("Images/", repr(item))
+        self.assertNotIn("api_key", repr(item))
+
+
 class ImageUrlTest(unittest.TestCase):
     def test_builds_url(self):
         url = emby.image_url(FakeServer(), "item-1", "tag-abc", width=400)
@@ -79,6 +111,17 @@ class ImageUrlTest(unittest.TestCase):
 
     def test_empty_tag_returns_empty(self):
         self.assertEqual(emby.image_url(FakeServer(), "item-1", ""), "")
+
+
+class BackdropUrlTest(unittest.TestCase):
+    def test_builds_url(self):
+        url = emby.backdrop_url(FakeServer(), "item-1", "bd-1")
+        self.assertIn("/Items/item-1/Images/Backdrop/0", url)
+        self.assertIn("tag=bd-1", url)
+        self.assertIn("maxWidth=1920", url)
+
+    def test_empty_tag_returns_empty(self):
+        self.assertEqual(emby.backdrop_url(FakeServer(), "item-1", ""), "")
 
 
 class SearchTest(unittest.TestCase):

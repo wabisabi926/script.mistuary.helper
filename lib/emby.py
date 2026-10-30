@@ -53,6 +53,15 @@ def image_url(server, item_id: str, tag: str, width: int = 400) -> str:
     )
 
 
+def backdrop_url(server, item_id: str, tag: str, width: int = 1920) -> str:
+    """背景图地址（取第一张 Backdrop）。tag 为空返回空串，调用方回退皮肤兜底。"""
+    if not tag:
+        return ""
+    return "%s/Items/%s/Images/Backdrop/0?tag=%s&maxWidth=%d&quality=90&api_key=%s" % (
+        server.base_url, item_id, tag, width, server.token,
+    )
+
+
 def play_url(server, item_id: str) -> str:
     """播放地址走 Emby 插件自己的 mode=play，避免我们处理直链鉴权。
 
@@ -77,6 +86,15 @@ def normalize(raw: dict) -> dict:
     provider_ids = raw.get("ProviderIds") or {}
     item_type = (raw.get("Type") or "").strip()
 
+    # Emby 的 /Items?searchTerm= 返回的是 ImageTags.Primary，不是 PrimaryImageTag；
+    # 老版本/别的端点才给 PrimaryImageTag。两个都认，先旧后新。
+    image_tags = raw.get("ImageTags")
+    if not isinstance(image_tags, dict):
+        image_tags = {}
+    backdrop_tags = raw.get("BackdropImageTags")
+    if not isinstance(backdrop_tags, list):
+        backdrop_tags = []
+
     return {
         "id": raw.get("Id") or "",
         "name": raw.get("Name") or "",
@@ -87,7 +105,9 @@ def normalize(raw: dict) -> dict:
         "critic_rating": raw.get("CriticRating") or 0,
         "overview": raw.get("Overview") or "",
         "runtime_min": runtime_min,
-        "image_tag": raw.get("PrimaryImageTag") or "",
+        "image_tag": raw.get("PrimaryImageTag") or image_tags.get("Primary") or "",
+        # 只存 tag，不存完整地址（地址带 api_key，落盘就是泄露令牌）
+        "backdrop_tag": backdrop_tags[0] if backdrop_tags else "",
         "played": bool(user_data.get("Played")),
         "position_ticks": user_data.get("PlaybackPositionTicks") or 0,
         "imdb": provider_ids.get("Imdb") or "",
@@ -117,7 +137,7 @@ def search(server, query: str, media_type: str, limit: int = 100, offset: int = 
         "IncludeItemTypes": item_type,
         "Fields": FIELDS,
         "ImageTypeLimit": 1,
-        "EnableImageTypes": "Primary",
+        "EnableImageTypes": "Primary,Backdrop",
         "Limit": limit,
         "StartIndex": offset or None,
         "UserId": server.user_id,
@@ -180,6 +200,9 @@ def render_search(handle: int, base_url: str, req) -> bool:
         if poster:
             art["poster"] = poster
             art["thumb"] = poster
+        backdrop = backdrop_url(server, item["id"], item.get("backdrop_tag", ""))
+        if backdrop:
+            art["fanart"] = backdrop
         if art:
             list_item.setArt(art)
 
