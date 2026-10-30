@@ -8,7 +8,7 @@
 `script.mistuary.helper` 是 Mistuary 皮肤的**可选**配套插件，当前 **0.2.2**，
 82 项单测全绿，已发布 `v0.2.0` / `v0.2.1` / `v0.2.2`。
 搜索和豆瓣评分主路径已接在皮肤 `main`，**M1c 已于 2026-10-30 实机验收通过**（含播放）；
-剩余一个已确认的展示问题：搜索结果没有封面。
+搜索结果的**真海报与真背景图**已于 2026-10-30 修好（`c4ac966`），实机确认正常。
 
 ## 2. 当前能力
 
@@ -45,20 +45,22 @@ Kodi 日志报 `CGUIMediaWindow::GetDirectory(...) failed`。
 
 ## 4. 已知问题（交接重点）
 
-### 4.1 搜索结果没有封面
+### 4.1 搜索结果没有封面（已解决，2026-10-30）
 
-**现象**：搜索结果卡片只有默认图标，没有海报。
+**现象**：搜索结果卡片只有默认图标，没有海报，背景也没有剧照。
 
-**根因（2026-10-30 实网确认）**：Emby `/Items?searchTerm=` 返回的是
+**根因**：Emby `/Items?searchTerm=` 返回的是 `ImageTags.Primary`，
+**没有** `PrimaryImageTag` 字段；`normalize()` 只读后者 → `image_tag` 永远为空。
 
-```json
-"ImageTags": {"Primary": "4e8bceb2..."}
-```
+**已做（`c4ac966`）**：
 
-没有 `PrimaryImageTag` 字段。`lib/emby.py` 的 `normalize()` 只读
-`raw.get("PrimaryImageTag")`，所以 `image_tag` 永远为空，`render_search()` 不设 poster。
+- `normalize()` 先读 `PrimaryImageTag`，再回退 `ImageTags.Primary`
+- 新增 `backdrop_tag`（`BackdropImageTags[0]`，只存 tag 不存 URL）
+- 新增 `backdrop_url()`，`render_search()` 补 `art["fanart"]`
+- 请求参数 `EnableImageTypes` 改为 `Primary,Backdrop`
+- 测试夹具改成 Emby 真实形状，90 项单测全绿
 
-**修复方向**：
+**历史记录（已不适用）**：
 
 ```python
 "image_tag": raw.get("PrimaryImageTag")

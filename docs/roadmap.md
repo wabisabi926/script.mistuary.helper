@@ -43,7 +43,7 @@ action 目录调用未收尾，两个问题都已修复并发布。
 |---|---|---|---|
 | ✅ | M1c 实机验证 + 播放地址 | — | **已完成**（2026-10-30 22:00） |
 | ✅ | 发布皮肤 1.4.0 | — | **已完成**（tag `v1.4.0` + Release） |
-| 1 | 修搜索封面（`ImageTags.Primary`） | 0.5 天 | 见 HANDOVER 已知问题 4.1 |
+| ✅ | 修搜索封面（`ImageTags.Primary`） | — | **已完成**（`c4ac966`，实机正常） |
 | 2 | 发皮肤 1.4.1（插件状态列 + 搜索键盘开关键） | 0.3 天 | 已在 `main`，未发版 |
 | — | M1d 搜索补齐（演员 / 类型 / 前缀策略） | 1–1.5 天 | 暂缓，等真实需求 |
 | — | M3 代表集 / M4 行级增强 | — | 不做 / 可选未排期 |
@@ -275,12 +275,11 @@ RunScript(script.mistuary.helper,action=rating,dbid=…,imdb=…,tmdb=…)
 
 ## 已知问题（2026-10-30）
 
-1. **搜索结果没有封面**：Emby `/Items?searchTerm=` 返回 `ImageTags.Primary`，
-   `normalize()` 只读 `PrimaryImageTag`，所以 `image_tag` 为空。0.2.2 还没修；
-   修复方向是回退读 `ImageTags.Primary`，并把 `tests/test_emby.py` 的夹具改成真实字段。
-2. **搜索页背景没有兜底图**：皮肤侧问题。非空查询且条目没有 fanart 时，
-   `NaraSearchBackground` 只剩纯黑层；插件不负责皮肤背景。
-3. **播放地址**：`mode=play` 未实机验证，直链兜底未实现。
+1. ~~**搜索结果没有封面**~~ **已解决（`c4ac966`）**：`normalize()` 回退读
+   `ImageTags.Primary`，并补 `backdrop_tag` + `art["fanart"]`；实机确认有海报和剧照背景。
+2. ~~**搜索页背景没有兜底图**~~ **已解决（皮肤侧）**：`NaraSearchBackground` 改成
+   渐变打底 + 剧照层，且全部改用百分比宽度（原来写死 1920，在 18:9 屏上会漏边）。
+3. ~~**播放地址**~~ **已解决**：实机点搜索结果可直接播放，`play_url()` 不用改。
 4. **M1d / M3 / M4**：演员/类型/别名/分词暂缓，代表集不做，行级增强未排期。
 
 ---
