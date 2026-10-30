@@ -96,5 +96,26 @@ class BuildSearchUrlTest(unittest.TestCase):
         self.assertIn("offset=100", url)
 
 
+    def test_runscript_style_argv_joined(self):
+        """RunScript 会按逗号拆参数，入口用 & 拼回后要能解析。"""
+        raw = "&".join(["action=rating", "type=movie", "dbid=42", "imdb=tt1533117"])
+        req = router.parse(raw)
+        self.assertEqual(req.action, "rating")
+        self.assertEqual(req.type, "movie")
+        self.assertEqual(req.dbid, "42")
+        self.assertEqual(req.imdb, "tt1533117")
+
+
+    def test_argv_layouts(self):
+        """插件目录有 handle；RunScript 没有，参数从 argv[1] 开始。"""
+        handle, args = router.argv_to_args(["C:/addon/default.py", "12", "?mode=search&query=RZD"])
+        self.assertEqual(handle, 12)
+        self.assertEqual(args, "?mode=search&query=RZD")
+
+        handle, args = router.argv_to_args(["C:/addon/default.py", "action=rating", "type=movie", "dbid=42"])
+        self.assertEqual(handle, -1)
+        self.assertEqual(args, "action=rating&type=movie&dbid=42")
+
+
 if __name__ == "__main__":
     unittest.main()

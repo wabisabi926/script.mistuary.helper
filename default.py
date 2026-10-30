@@ -21,13 +21,14 @@ import xbmcplugin
 from lib import i18n, log, router
 
 ADDON = xbmcaddon.Addon()
-HANDLE = int(sys.argv[1]) if len(sys.argv) > 1 else -1
+# RunScript 调脚本 addon 时没有 handle（argv 从第一个参数开始），
+# plugin:// 调用时 argv[1] 才是 handle —— 交给 router 统一判断。
+HANDLE, ARGS = router.argv_to_args(sys.argv)
 BASE_URL = sys.argv[0] if sys.argv else ""
 
 
 def main():
-    args = sys.argv[2] if len(sys.argv) > 2 else ""
-    req = router.parse(args)
+    req = router.parse(ARGS)
     log.debug("dispatch mode=%s action=%s type=%s" % (req.mode, req.action, req.type))
 
     if req.mode == "search":

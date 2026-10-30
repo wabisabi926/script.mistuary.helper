@@ -1,3 +1,11 @@
+0.2.0 豆瓣评分
+[新增]
+- 详情页可显示豆瓣评分：按 IMDb id 取分，双通道（legacy / frodo）互备，缓存 7 天
+- 失败时写 Status=error / missing，皮肤自动隐藏胶囊，不弹窗
+- 支持从 Kodi 库的 dbid 反查 IMDb id；Emby 条目可直接传 IMDb id
+- 同时支持 plugin:// 目录与 RunScript 脚本两种调用方式
+- 没有 IMDb 时按标题 + 年份兜底（皮肤通过窗口属性传入，避免标题里的逗号拆坏参数）
+
 0.1.0
 [新增]
 - 服务端搜索：电影 / 剧集两个页签，中文、全拼、别名、演员名与 Emby 官方 App 一致

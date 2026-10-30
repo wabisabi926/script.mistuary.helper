@@ -81,3 +81,36 @@ def clear_home_property(key: str) -> None:
     import xbmcgui
 
     xbmcgui.Window(10000).clearProperty(key)
+
+
+def video_uniqueid(dbid: int, kind: str = "imdb") -> str:
+    """从 Kodi 媒体库取一个条目的 uniqueid。查不到返回空串，不抛异常。
+
+    只用于 `dbid > 0` 的老调用方；Emby 动态条目通常没有 DBID，皮肤应直接传 imdb。
+    """
+    try:
+        import json
+        import xbmc
+
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "VideoLibrary.GetItemDetails",
+            "params": {"itemid": int(dbid), "properties": ["uniqueid"]},
+        }
+        raw = xbmc.executeJSONRPC(json.dumps(payload))
+        data = json.loads(raw)
+        details = ((data.get("result") or {}).get("itemdetails") or {})
+        return ((details.get("uniqueid") or {}).get(kind) or "").strip()
+    except Exception:  # noqa: BLE001 - Kodi 不可用/条目不存在都按空处理
+        return ""
+
+
+def get_home_property(key: str) -> str:
+    """读 Window(home) 属性。没有 Kodi 时返回空串。"""
+    try:
+        import xbmcgui
+
+        return xbmcgui.Window(10000).getProperty(key) or ""
+    except Exception:  # noqa: BLE001
+        return ""

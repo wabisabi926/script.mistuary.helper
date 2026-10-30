@@ -35,6 +35,22 @@ plugin://script.mistuary.helper/?mode=search&type=shows&query=<搜索词>
 **`query` 放最后是硬约束**：插件用 `raw.split("query=", 1)` 取值，
 这样中文、`&`、`?`、`=` 都不会被截断。已知限制：`#` 会被 Kodi 当锚点截掉，无法绕开。
 
+### 2.1.1 当前实际能力（2026-10-30 实测）
+
+| 能力 | 状态 | 说明 |
+|---|---|---|
+| 中文标题 | ✅ | `/Items?searchTerm=` |
+| 原名 | ✅ | `12th Fail` → 12年级的失败；大小写不敏感 |
+| 全拼 | ✅ | `rangzidanfei` → 让子弹飞 |
+| 首字母 | ✅ 子串 | `RZD` 会命中 `JQRZDY`（机器人总动员）；不是前缀 |
+| 剧集 | ✅ | `20之后` 命中；标点密集的标题可能因 Emby 分词失败 |
+| 演员 / 导演 | ❌ | `/Items?searchTerm=` 不索引；方案见 roadmap M1d（暂缓） |
+| 类型 | ❌ | 需 `Genres=` 过滤；方案见 roadmap M1d（暂缓） |
+| 别名 / 分词 | ❌ | 未实现 |
+
+皮肤侧已经接好（`a6b9f59`），但**插件必须在 Kodi 里启用**，否则软探测为假、
+开关隐藏、搜索回退本地。装/卸/启用后都要重载皮肤。
+
 ### 2.2 动作（无界面）
 
 ```
@@ -42,7 +58,25 @@ RunScript(script.mistuary.helper,action=rating,type=movie,dbid=<Kodi 库 id>)
 RunScript(script.mistuary.helper,action=techflags,dbid=<剧集 id>)
 ```
 
-`action=rating`（P1）写窗口属性，`action=techflags`（P2）写条目属性。
+`action=rating`（0.2.0）写窗口属性，`action=techflags`（P3）写条目属性。
+
+**参数拼接**：`RunScript(addon,action=rating,type=movie,dbid=…,imdb=…)` 里的逗号会被 Kodi
+拆成多个 argv；入口用 `router.argv_to_args()` 判断布局并拼回：
+
+- `plugin://` 目录调用：`argv[1]` 是 handle，参数从 `argv[2]` 开始；
+- `RunScript` 调脚本 addon：没有 handle，参数从 `argv[1]` 开始。
+
+因此参数值里不能再出现逗号（标题走 `Mistuary.Rating.Query` 窗口属性）。
+插件 `addon.xml` 同时声明 `xbmc.python.script`，否则 Kodi 会警告
+「RunScript called for a non-script addon」。
+
+推荐调用（详情页 onload）：
+
+```xml
+<onload condition="System.AddonIsEnabled(script.mistuary.helper)">RunScript(script.mistuary.helper,action=rating,type=$INFO[ListItem.DBType],dbid=$INFO[ListItem.DBID],imdb=$INFO[ListItem.IMDBNumber])</onload>
+```
+
+`imdb` 是主路径（Emby 动态条目没有 DBID），`dbid` 只用于本地库反查 `uniqueid`。
 
 ## 三、插件写什么
 
@@ -56,6 +90,16 @@ RunScript(script.mistuary.helper,action=techflags,dbid=<剧集 id>)
 | `Mistuary.Rating.Votes` | `123456` | 票数，可能为空 |
 | `Mistuary.Rating.FetchedAt` | `1793000000` | epoch，皮肤可用来判过期 |
 | `Mistuary.Rating.Status` | `ok` / `missing` / `error` | **皮肤只在 `ok` 时显示** |
+
+**皮肤写给插件（兜底输入）**：
+
+| 属性 | 示例 | 说明 |
+|---|---|---|
+| `Mistuary.Rating.Query` | `让子弹飞` | 详情页标题；标题可能带逗号，不能走 RunScript 参数 |
+| `Mistuary.Rating.Year` | `2010` | 年份，用来排除同名不同年的条目 |
+
+插件只在拿不到 IMDb id 时读这两个属性，按标题搜豆瓣并要求标题完全一致、
+年份一致（给了年份时）。
 
 ### 3.2 条目属性（代表集标识，P2）
 
