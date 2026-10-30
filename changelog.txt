@@ -1,3 +1,9 @@
+0.2.2 action 模式目录收尾
+[修复]
+- 修复 plugin://...?action=rating / action=techflags 调用时没有结束目录，
+  Kodi 日志报 CGUIMediaWindow::GetDirectory(...) failed 的问题
+- RunScript 调用没有 handle，继续保持不触发 endOfDirectory
+
 0.2.1 搜索修复
 [修复]
 - 修复 Kodi 21+ 在插件目录调用末尾追加 resume:false，导致搜索词被拼成
