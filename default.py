@@ -9,7 +9,8 @@ Kodi 每次调用插件都会重新执行这个脚本，所以这里保持极薄
   1. 目录：plugin://script.mistuary.helper/?mode=search&type=movies&query=...
      → 必须调用 endOfDirectory()，否则 Kodi 一直转圈
   2. 动作：RunScript(script.mistuary.helper,action=rating,dbid=...)
-     → 不产生界面，只写窗口属性
+     或 plugin://...?action=rating
+     → 不产生界面，只写窗口属性；plugin:// 形态也要补 endOfDirectory()
 """
 
 import sys
@@ -18,7 +19,7 @@ import xbmcaddon
 import xbmcgui
 import xbmcplugin
 
-from lib import i18n, log, router
+from lib import i18n, kodi, log, router
 
 ADDON = xbmcaddon.Addon()
 # RunScript 调脚本 addon 时没有 handle（argv 从第一个参数开始），
@@ -40,17 +41,19 @@ def main():
         return
 
     if req.action == "rating":
-        # P1：豆瓣评分。阶段 1 什么都不写，皮肤读到空属性就隐藏胶囊。
+        # M2：写豆瓣评分窗口属性。
         from lib import douban
 
         douban.run_action(req)
+        kodi.end_directory(HANDLE)
         return
 
     if req.action == "techflags":
-        # P2：代表集技术标识。
+        # M3 暂缓：当前只记日志。
         from lib import techflags
 
         techflags.run_action(req)
+        kodi.end_directory(HANDLE)
         return
 
     if req.action == "clear_cache":
@@ -61,10 +64,12 @@ def main():
         xbmcgui.Dialog().notification(
             ADDON.getAddonInfo("name"), i18n.t(32028), xbmcgui.NOTIFICATION_INFO, 3000
         )
+        kodi.end_directory(HANDLE)
         return
 
     # 无参数 / 无法识别：给出人话提示，不要静默什么都不做。
     xbmcgui.Dialog().ok(ADDON.getAddonInfo("name"), i18n.t(32020))
+    kodi.end_directory(HANDLE)
 
 
 if __name__ == "__main__":

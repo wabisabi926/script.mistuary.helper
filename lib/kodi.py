@@ -70,6 +70,21 @@ def add_notice(handle: int, base_url: str, message: str, playable: bool = False)
     xbmcplugin.addDirectoryItem(handle, base_url, list_item, isFolder=False)
 
 
+def end_directory(handle: int, succeeded: bool = True) -> None:
+    """目录调用收尾。
+
+    `RunScript` 的 handle 是 -1，不能调 endOfDirectory；只有通过
+    `plugin://...?action=...` 进来的目录调用才需要。不补这一下，Kodi 会报
+    `CGUIMediaWindow::GetDirectory(...) failed`。
+    """
+    if handle < 0:
+        return
+
+    import xbmcplugin
+
+    xbmcplugin.endOfDirectory(handle, succeeded=succeeded, cacheToDisc=False)
+
+
 def set_home_property(key: str, value: str) -> None:
     """写 Window(home) 属性 —— 皮肤读这个（HANDOVER §5.7）。"""
     import xbmcgui
