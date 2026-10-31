@@ -109,20 +109,20 @@ msgid "Connection failed: {0}"
 msgstr "连接失败：{0}"
 
 msgctxt "#32050"
-msgid "Leave empty to use the first Emby server; enter the Server ID for a specific one."
-msgstr "留空使用第一个 Emby 服务器；多服务器时填 Server ID。"
+msgid "Leave empty unless you run more than one Emby server and need a specific one."
+msgstr "不确定就留空。只有装了多台 Emby、要指定其中一台时才填。"
 
 msgctxt "#32051"
-msgid "Follows the Emby add-on by default; fill only to use another server for rating lookups."
-msgstr "默认跟随 Emby 插件；仅为评分查询指定另一台服务器时填写。"
+msgid "Follows the Emby add-on. Only fill this to look up ratings on a different server."
+msgstr "默认跟随 Emby 插件，一般不用填。评分要查另一台服务器时才填地址。"
 
 msgctxt "#32052"
-msgid "Used with the URL override; affects rating lookups only."
-msgstr "与地址覆盖配合；只影响豆瓣评分查询。"
+msgid "Used together with the address above. Rating lookups only; search is unaffected."
+msgstr "配合上面的地址用；只影响豆瓣评分查询，不影响搜索。"
 
 msgctxt "#32053"
-msgid "Check the address and API key; the result appears as a notification."
-msgstr "检查地址与 API Key，结果显示在通知中。"
+msgid "Tests the address and API key above; the result shows as a notification."
+msgstr "测一下上面的地址和 API Key 能不能用，结果弹通知。"
 
 msgctxt "#32054"
 msgid "Results per page for server search. Default 100."

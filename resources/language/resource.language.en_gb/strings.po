@@ -109,20 +109,20 @@ msgid "Connection failed: {0}"
 msgstr "Connection failed: {0}"
 
 msgctxt "#32050"
-msgid "Leave empty to use the first Emby server; enter the Server ID for a specific one."
-msgstr "Leave empty to use the first Emby server; enter the Server ID for a specific one."
+msgid "Leave empty unless you run more than one Emby server and need a specific one."
+msgstr "Leave empty unless you run more than one Emby server and need a specific one."
 
 msgctxt "#32051"
-msgid "Follows the Emby add-on by default; fill only to use another server for rating lookups."
-msgstr "Follows the Emby add-on by default; fill only to use another server for rating lookups."
+msgid "Follows the Emby add-on. Only fill this to look up ratings on a different server."
+msgstr "Follows the Emby add-on. Only fill this to look up ratings on a different server."
 
 msgctxt "#32052"
-msgid "Used with the URL override; affects rating lookups only."
-msgstr "Used with the URL override; affects rating lookups only."
+msgid "Used together with the address above. Rating lookups only; search is unaffected."
+msgstr "Used together with the address above. Rating lookups only; search is unaffected."
 
 msgctxt "#32053"
-msgid "Check the address and API key; the result appears as a notification."
-msgstr "Check the address and API key; the result appears as a notification."
+msgid "Tests the address and API key above; the result shows as a notification."
+msgstr "Tests the address and API key above; the result shows as a notification."
 
 msgctxt "#32054"
 msgid "Results per page for server search. Default 100."
