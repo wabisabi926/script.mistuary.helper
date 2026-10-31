@@ -59,11 +59,9 @@ Kodi 21+ 的目录调用还会在 argv 末尾额外传一个 `resume:false`；0.
 
 ```
 RunScript(script.mistuary.helper,action=rating,type=movie,dbid=<Kodi 库 id>)
-RunPlugin(plugin://script.mistuary.helper/?action=sync_ratings)
 ```
 
-`action=rating`（0.2.0+）写窗口属性；
-`action=sync_ratings`（0.3.0+）立即把 Emby 的豆瓣分同步进 Kodi 库（与后台服务同一入口）。
+`action=rating`（0.2.0+）写窗口属性。
 
 0.2.2 起，通过 `plugin://...?action=...` 调用时入口会补 `endOfDirectory`，不会再报
 `CGUIMediaWindow::GetDirectory(...) failed`；`RunScript` 没有 handle，不会触发收尾。
@@ -125,25 +123,6 @@ TvShowRepresentative.VideoCodec / AudioCodec / AudioChannels
 限制：只对插件自己生成的列表有效。Kodi 库里的行拿不到 ListItem 引用。
 
 
-### 3.3 写 Kodi 库（豆瓣评分，0.3.0+）
-
-后台服务（启动 60 秒后、按设置的间隔）与 `action=sync_ratings` 会把豆瓣分写成
-Kodi 库里的独立评分记录：
-
-| 项 | 值 |
-|---|---|
-| 表 | `MyVideos<ver>.db` → `rating` |
-| `rating_type` | `douban` |
-| `rating` | 0–10，一位小数 |
-| `media_type` | `movie` / `tvshow` / `episode` |
-
-规则：
-
-- 只读 Emby 的 `/Douban/RatingsByImdb`，**不请求豆瓣**；
-- 主评分（`default` / `imdb`）**不改动**；
-- 值变化才写、豆瓣分消失则删除该行；单事务提交，失败只记日志；
-- 皮肤用 `ListItem.Rating(douban)` 判断「这条主评分是否来自豆瓣」。
-
 ## 四、降级表
 
 **装了就多，不装就少。每一项都有明确的"没有插件"状态，且那个状态是当前已有行为。**
@@ -151,12 +130,12 @@ Kodi 库里的独立评分记录：
 | 功能 | 装了插件 | 没装 / 禁用 / 版本低 |
 |---|---|---|
 | 搜索：中文标题 / 原名 | Emby 服务端，与官方 App 一致 | 本地 XSP（`contains`） |
-| 搜索：首字母（`HZ` / `S`） | 服务端 | 本地 XSP（`startswith`） |
+| 搜索：首字母（`HZ` / `S`） | 服务端；2–4 位 ASCII 前缀严格 | 本地 XSP（`startswith`） |
 | 搜索：全拼 / 原名 | ✅ | ❌ 没有（本地没有拼音库） |
 | 搜索：演员 / 导演 / 类型 | ✅ 仅非 ASCII（0.3.3+，并入结果） | ❌ 没有（1.2.0 起本地已移除） |
 | 搜索：别名 / 分词 | ❌ 未实现 | ❌ 没有（本地没有分词器） |
 | 详情页豆瓣胶囊 | ✅ 显示 | 整行不显示，其余评分胶囊照常 |
-| 剧集代表集技术标识 | 插件写属性 | 皮肤自己的 `ListItemAbsolute(0)` 推断，**行为不变** |
+| 剧集代表集技术标识 | 不适用（皮肤自行处理） | 皮肤自己的 `ListItemAbsolute(0)` 推断，**行为不变** |
 | 启动 / 播放 / 设置 | 不受影响 | 不受影响 |
 
 ## 五、四条硬约束

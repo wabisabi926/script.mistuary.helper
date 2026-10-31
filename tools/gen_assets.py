@@ -48,13 +48,6 @@ def gradient_from(base_path: str, size: tuple) -> Image.Image:
     return tiny.resize(size, Image.BICUBIC).filter(ImageFilter.GaussianBlur(1))
 
 
-def rounded_mask(size: int, radius: int) -> Image.Image:
-    mask = Image.new("L", (size * 4, size * 4), 0)
-    ImageDraw.Draw(mask).rounded_rectangle(
-        (0, 0, size * 4 - 1, size * 4 - 1), radius=radius * 4, fill=255)
-    return mask.resize((size, size), Image.LANCZOS)
-
-
 def draw_text(draw, xy, text, font, fill, shadow=True):
     if shadow:
         draw.text((xy[0], xy[1] + 2), text, font=font, fill=(0, 0, 0, 70))
@@ -82,11 +75,9 @@ def build_icon(base_path: str, font_path: str) -> Image.Image:
     cx, cy = ICON_SIZE - 38, 38
     draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=ACCENT + (255,))
 
-    # 1px 内描边，和皮肤图标同款"玻璃边"
-    draw.rounded_rectangle((0, 0, ICON_SIZE - 1, ICON_SIZE - 1), radius=22,
-                           outline=(255, 255, 255, 26), width=1)
-
-    canvas.putalpha(rounded_mask(ICON_SIZE, 22))
+    # 1px 方角内描边；插件图标保持方角（皮肤不给插件图标加圆角）
+    draw.rectangle((0, 0, ICON_SIZE - 1, ICON_SIZE - 1),
+                   outline=(255, 255, 255, 26), width=1)
     return canvas
 
 

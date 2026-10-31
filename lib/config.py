@@ -34,8 +34,6 @@ DEFAULTS = {
     "page_size": 100,
     "douban_enabled": True,
     "douban_prefer_emby": True,
-    "rating_sync_enabled": False,
-    "rating_sync_interval_hours": 6,
     "emby_url_override": "",
     "emby_token_override": "",
     "cache_ttl": 300,
@@ -161,15 +159,8 @@ def read_settings() -> dict:
             pass
         values["douban_enabled"] = bool(addon.getSettingBool("douban_enabled"))
         values["douban_prefer_emby"] = bool(addon.getSettingBool("douban_prefer_emby"))
-        values["rating_sync_enabled"] = bool(addon.getSettingBool("rating_sync_enabled"))
         values["emby_url_override"] = (addon.getSettingString("emby_url_override") or "").strip()
         values["emby_token_override"] = (addon.getSettingString("emby_token_override") or "").strip()
-        try:
-            hours = int(addon.getSettingInt("rating_sync_interval_hours") or
-                        DEFAULTS["rating_sync_interval_hours"])
-            values["rating_sync_interval_hours"] = max(1, min(24, hours))
-        except (TypeError, ValueError):
-            pass
         try:
             values["cache_ttl"] = max(0, int(addon.getSettingInt("cache_ttl") or DEFAULTS["cache_ttl"]))
         except (TypeError, ValueError):

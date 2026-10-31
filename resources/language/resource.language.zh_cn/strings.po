@@ -8,73 +8,57 @@ msgstr ""
 "Language: zh_CN\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-msgctxt "#32000"
-msgid "General"
-msgstr "常规"
-
 msgctxt "#32001"
-msgid "Emby server ID (leave empty for the first one)"
-msgstr "Emby 服务器 ID（留空用第一个）"
+msgid "Server ID"
+msgstr "服务器 ID"
 
 msgctxt "#32002"
-msgid "Items per query"
-msgstr "每次查询条数"
+msgid "Results per page"
+msgstr "每页条数"
 
 msgctxt "#32003"
-msgid "Search cache (seconds)"
-msgstr "搜索缓存（秒）"
+msgid "Cache lifetime (seconds)"
+msgstr "缓存时长（秒）"
 
 msgctxt "#32004"
-msgid "Fetch Douban ratings"
+msgid "Fetch Douban rating"
 msgstr "获取豆瓣评分"
 
 msgctxt "#32005"
-msgid "Write debug log"
+msgid "Debug logging"
 msgstr "写调试日志"
-
-msgctxt "#32010"
-msgid "Maintenance"
-msgstr "维护"
 
 msgctxt "#32011"
 msgid "Clear cache"
 msgstr "清空缓存"
 
-msgctxt "#32012"
-msgid "Cache stores search results and ratings only, never your token."
-msgstr "缓存只存搜索结果和评分，不含令牌。"
-
-msgctxt "#32013"
-msgid "Changing settings here takes effect on the next call, no restart needed."
-msgstr "这里的改动下次调用即生效，不用重启。"
-
 msgctxt "#32020"
-msgid "Open this from the skin, or use the add-on settings."
-msgstr "请从皮肤进入，或在「我的插件」里打开本插件的设置。"
+msgid "Open this add-on from the skin's search page."
+msgstr "请从皮肤搜索进入本插件。"
 
 msgctxt "#32021"
-msgid "No Emby server found. Install and sign in to the Emby add-on first."
-msgstr "没有找到 Emby 服务器配置，请先安装并登录 Emby 插件。"
+msgid "No Emby server found. Sign in to the Emby add-on first."
+msgstr "没有找到 Emby 服务器，请先登录 Emby 插件。"
 
 msgctxt "#32022"
 msgid "Type something to search."
 msgstr "请输入搜索词。"
 
 msgctxt "#32023"
-msgid "Emby sign-in expired. Reconnect in the Emby add-on."
-msgstr "Emby 登录已失效，请在 Emby 插件里重新连接。"
+msgid "Emby login expired. Reconnect the Emby add-on."
+msgstr "Emby 登录已失效，请重新连接 Emby 插件。"
 
 msgctxt "#32024"
-msgid "Emby server unreachable. Check the network or server address."
-msgstr "Emby 服务端不可达，请检查网络或服务器地址。"
+msgid "Cannot reach the Emby server. Check the network or address."
+msgstr "无法连接 Emby 服务器，请检查网络或地址。"
 
 msgctxt "#32025"
 msgid "Emby returned an error (HTTP {0})."
 msgstr "Emby 返回错误（HTTP {0}）。"
 
 msgctxt "#32026"
-msgid "Nothing found for “{0}”."
-msgstr "没有找到「{0}」。"
+msgid "No results for “{0}”."
+msgstr "没有找到“{0}”。"
 
 msgctxt "#32027"
 msgid "Load more…"
@@ -84,41 +68,21 @@ msgctxt "#32028"
 msgid "Cache cleared."
 msgstr "缓存已清空。"
 
-msgctxt "#32030"
-msgid "Douban sync: {0} written, {1} removed."
-msgstr "豆瓣评分同步：写入 {0} 条，删除 {1} 条。"
-
-msgctxt "#32031"
-msgid "Douban sync failed ({0})."
-msgstr "豆瓣评分同步失败（{0}）。"
-
 msgctxt "#32032"
 msgid "Prefer Emby Douban rating"
-msgstr "优先使用 Emby 的豆瓣评分"
-
-msgctxt "#32033"
-msgid "Sync Douban rating into library (experimental)"
-msgstr "把豆瓣评分同步进媒体库（实验性）"
-
-msgctxt "#32034"
-msgid "Sync interval (hours)"
-msgstr "同步间隔（小时）"
-
-msgctxt "#32035"
-msgid "Sync Douban rating now"
-msgstr "立即同步豆瓣评分"
+msgstr "优先读 Emby 豆瓣分"
 
 msgctxt "#32036"
-msgid "Emby URL override"
-msgstr "Emby 地址覆盖"
+msgid "Server URL override"
+msgstr "地址覆盖"
 
 msgctxt "#32037"
-msgid "Emby API key override"
-msgstr "Emby API Key 覆盖"
+msgid "API key override"
+msgstr "API Key 覆盖"
 
 msgctxt "#32040"
-msgid "Server"
-msgstr "服务器"
+msgid "Emby server"
+msgstr "Emby 服务器"
 
 msgctxt "#32041"
 msgid "Search"
@@ -128,10 +92,6 @@ msgctxt "#32042"
 msgid "Douban rating"
 msgstr "豆瓣评分"
 
-msgctxt "#32043"
-msgid "Rating sync"
-msgstr "评分同步"
-
 msgctxt "#32044"
 msgid "Logging & diagnostics"
 msgstr "日志与诊断"
@@ -139,10 +99,6 @@ msgstr "日志与诊断"
 msgctxt "#32045"
 msgid "Test Emby connection"
 msgstr "测试 Emby 连接"
-
-msgctxt "#32046"
-msgid "Experimental: writes ratings into the Kodi library; the skin does not read them yet."
-msgstr "实验性：写入 Kodi 媒体库，皮肤当前不读取。"
 
 msgctxt "#32047"
 msgid "Connected: {0}"
@@ -152,3 +108,42 @@ msgctxt "#32048"
 msgid "Connection failed: {0}"
 msgstr "连接失败：{0}"
 
+msgctxt "#32050"
+msgid "Leave empty to use the first Emby server; enter the Server ID for a specific one."
+msgstr "留空使用第一个 Emby 服务器；多服务器时填 Server ID。"
+
+msgctxt "#32051"
+msgid "Follows the Emby add-on by default; fill only to use another server for rating lookups."
+msgstr "默认跟随 Emby 插件；仅为评分查询指定另一台服务器时填写。"
+
+msgctxt "#32052"
+msgid "Used with the URL override; affects rating lookups only."
+msgstr "与地址覆盖配合；只影响豆瓣评分查询。"
+
+msgctxt "#32053"
+msgid "Check the address and API key; the result appears as a notification."
+msgstr "检查地址与 API Key，结果显示在通知中。"
+
+msgctxt "#32054"
+msgid "Results per page for server search. Default 100."
+msgstr "服务端搜索结果每页数量，默认 100。"
+
+msgctxt "#32055"
+msgid "Cache lifetime for a query. Default 300 seconds."
+msgstr "同一关键词的缓存时间，默认 300 秒。"
+
+msgctxt "#32056"
+msgid "Show the Douban rating on the info page; no Douban requests when off."
+msgstr "在详情页显示豆瓣分；关闭后不再请求豆瓣。"
+
+msgctxt "#32057"
+msgid "Read the Douban score from Emby (StrmAssistant) first, then fall back to the public Douban API."
+msgstr "先读神医助手写入 Emby 的豆瓣分，取不到再查豆瓣公开接口。"
+
+msgctxt "#32058"
+msgid "Write MISTUARY.HELPER logs to kodi.log for troubleshooting."
+msgstr "在 kodi.log 输出 MISTUARY.HELPER 日志，排查问题用。"
+
+msgctxt "#32059"
+msgid "Delete search and rating caches; settings are kept."
+msgstr "删除搜索与评分缓存，不影响设置。"

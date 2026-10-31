@@ -8,73 +8,57 @@ msgstr ""
 "Language: en_GB\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgctxt "#32000"
-msgid "General"
-msgstr "General"
-
 msgctxt "#32001"
-msgid "Emby server ID (leave empty for the first one)"
-msgstr "Emby server ID (leave empty for the first one)"
+msgid "Server ID"
+msgstr "Server ID"
 
 msgctxt "#32002"
-msgid "Items per query"
-msgstr "Items per query"
+msgid "Results per page"
+msgstr "Results per page"
 
 msgctxt "#32003"
-msgid "Search cache (seconds)"
-msgstr "Search cache (seconds)"
+msgid "Cache lifetime (seconds)"
+msgstr "Cache lifetime (seconds)"
 
 msgctxt "#32004"
-msgid "Fetch Douban ratings"
-msgstr "Fetch Douban ratings"
+msgid "Fetch Douban rating"
+msgstr "Fetch Douban rating"
 
 msgctxt "#32005"
-msgid "Write debug log"
-msgstr "Write debug log"
-
-msgctxt "#32010"
-msgid "Maintenance"
-msgstr "Maintenance"
+msgid "Debug logging"
+msgstr "Debug logging"
 
 msgctxt "#32011"
 msgid "Clear cache"
 msgstr "Clear cache"
 
-msgctxt "#32012"
-msgid "Cache stores search results and ratings only, never your token."
-msgstr "Cache stores search results and ratings only, never your token."
-
-msgctxt "#32013"
-msgid "Changing settings here takes effect on the next call, no restart needed."
-msgstr "Changing settings here takes effect on the next call, no restart needed."
-
 msgctxt "#32020"
-msgid "Open this from the skin, or use the add-on settings."
-msgstr "Open this from the skin, or use the add-on settings."
+msgid "Open this add-on from the skin's search page."
+msgstr "Open this add-on from the skin's search page."
 
 msgctxt "#32021"
-msgid "No Emby server found. Install and sign in to the Emby add-on first."
-msgstr "No Emby server found. Install and sign in to the Emby add-on first."
+msgid "No Emby server found. Sign in to the Emby add-on first."
+msgstr "No Emby server found. Sign in to the Emby add-on first."
 
 msgctxt "#32022"
 msgid "Type something to search."
 msgstr "Type something to search."
 
 msgctxt "#32023"
-msgid "Emby sign-in expired. Reconnect in the Emby add-on."
-msgstr "Emby sign-in expired. Reconnect in the Emby add-on."
+msgid "Emby login expired. Reconnect the Emby add-on."
+msgstr "Emby login expired. Reconnect the Emby add-on."
 
 msgctxt "#32024"
-msgid "Emby server unreachable. Check the network or server address."
-msgstr "Emby server unreachable. Check the network or server address."
+msgid "Cannot reach the Emby server. Check the network or address."
+msgstr "Cannot reach the Emby server. Check the network or address."
 
 msgctxt "#32025"
 msgid "Emby returned an error (HTTP {0})."
 msgstr "Emby returned an error (HTTP {0})."
 
 msgctxt "#32026"
-msgid "Nothing found for “{0}”."
-msgstr "Nothing found for “{0}”."
+msgid "No results for “{0}”."
+msgstr "No results for “{0}”."
 
 msgctxt "#32027"
 msgid "Load more…"
@@ -84,41 +68,21 @@ msgctxt "#32028"
 msgid "Cache cleared."
 msgstr "Cache cleared."
 
-msgctxt "#32030"
-msgid "Douban sync: {0} written, {1} removed."
-msgstr "Douban sync: {0} written, {1} removed."
-
-msgctxt "#32031"
-msgid "Douban sync failed ({0})."
-msgstr "Douban sync failed ({0})."
-
 msgctxt "#32032"
 msgid "Prefer Emby Douban rating"
 msgstr "Prefer Emby Douban rating"
 
-msgctxt "#32033"
-msgid "Sync Douban rating into library (experimental)"
-msgstr "Sync Douban rating into library (experimental)"
-
-msgctxt "#32034"
-msgid "Sync interval (hours)"
-msgstr "Sync interval (hours)"
-
-msgctxt "#32035"
-msgid "Sync Douban rating now"
-msgstr "Sync Douban rating now"
-
 msgctxt "#32036"
-msgid "Emby URL override"
-msgstr "Emby URL override"
+msgid "Server URL override"
+msgstr "Server URL override"
 
 msgctxt "#32037"
-msgid "Emby API key override"
-msgstr "Emby API key override"
+msgid "API key override"
+msgstr "API key override"
 
 msgctxt "#32040"
-msgid "Server"
-msgstr "Server"
+msgid "Emby server"
+msgstr "Emby server"
 
 msgctxt "#32041"
 msgid "Search"
@@ -128,10 +92,6 @@ msgctxt "#32042"
 msgid "Douban rating"
 msgstr "Douban rating"
 
-msgctxt "#32043"
-msgid "Rating sync"
-msgstr "Rating sync"
-
 msgctxt "#32044"
 msgid "Logging & diagnostics"
 msgstr "Logging & diagnostics"
@@ -139,10 +99,6 @@ msgstr "Logging & diagnostics"
 msgctxt "#32045"
 msgid "Test Emby connection"
 msgstr "Test Emby connection"
-
-msgctxt "#32046"
-msgid "Experimental: writes ratings into the Kodi library; the skin does not read them yet."
-msgstr "Experimental: writes ratings into the Kodi library; the skin does not read them yet."
 
 msgctxt "#32047"
 msgid "Connected: {0}"
@@ -152,3 +108,42 @@ msgctxt "#32048"
 msgid "Connection failed: {0}"
 msgstr "Connection failed: {0}"
 
+msgctxt "#32050"
+msgid "Leave empty to use the first Emby server; enter the Server ID for a specific one."
+msgstr "Leave empty to use the first Emby server; enter the Server ID for a specific one."
+
+msgctxt "#32051"
+msgid "Follows the Emby add-on by default; fill only to use another server for rating lookups."
+msgstr "Follows the Emby add-on by default; fill only to use another server for rating lookups."
+
+msgctxt "#32052"
+msgid "Used with the URL override; affects rating lookups only."
+msgstr "Used with the URL override; affects rating lookups only."
+
+msgctxt "#32053"
+msgid "Check the address and API key; the result appears as a notification."
+msgstr "Check the address and API key; the result appears as a notification."
+
+msgctxt "#32054"
+msgid "Results per page for server search. Default 100."
+msgstr "Results per page for server search. Default 100."
+
+msgctxt "#32055"
+msgid "Cache lifetime for a query. Default 300 seconds."
+msgstr "Cache lifetime for a query. Default 300 seconds."
+
+msgctxt "#32056"
+msgid "Show the Douban rating on the info page; no Douban requests when off."
+msgstr "Show the Douban rating on the info page; no Douban requests when off."
+
+msgctxt "#32057"
+msgid "Read the Douban score from Emby (StrmAssistant) first, then fall back to the public Douban API."
+msgstr "Read the Douban score from Emby (StrmAssistant) first, then fall back to the public Douban API."
+
+msgctxt "#32058"
+msgid "Write MISTUARY.HELPER logs to kodi.log for troubleshooting."
+msgstr "Write MISTUARY.HELPER logs to kodi.log for troubleshooting."
+
+msgctxt "#32059"
+msgid "Delete search and rating caches; settings are kept."
+msgstr "Delete search and rating caches; settings are kept."

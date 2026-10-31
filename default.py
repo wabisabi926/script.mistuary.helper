@@ -67,25 +67,6 @@ def main():
         kodi.end_directory(HANDLE)
         return
 
-    if req.action == "sync_ratings":
-        # 手动同步：把 Emby 的豆瓣分写进 Kodi 库（后台服务也走同一入口）。
-        from lib import rating_sync
-
-        stats = rating_sync.sync(notify=True)
-        if stats.get("error"):
-            xbmcgui.Dialog().notification(
-                ADDON.getAddonInfo("name"), i18n.t(32031, stats["error"]),
-                xbmcgui.NOTIFICATION_WARNING, 4000
-            )
-        else:
-            xbmcgui.Dialog().notification(
-                ADDON.getAddonInfo("name"),
-                i18n.t(32030, stats.get("written", 0), stats.get("deleted", 0)),
-                xbmcgui.NOTIFICATION_INFO, 4000
-            )
-        kodi.end_directory(HANDLE)
-        return
-
     if req.action == "clear_cache":
         from lib import cache
 
