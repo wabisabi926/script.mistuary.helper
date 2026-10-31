@@ -41,6 +41,27 @@ def apply_video_info(list_item, item: dict) -> None:
 
     list_item.setInfo("video", info)
 
+    # streamdetails 只能走 addStreamInfo —— setInfo 写不进去。
+    # 皮肤的技术标识（4K / DV / HEVC / 声道）读的是 ListItem.VideoResolution
+    # 这一组值，没有 streamdetails 就整排塌陷成空。
+    video = item.get("video") or {}
+    if video.get("width") or video.get("height"):
+        details = {
+            "codec": video.get("codec") or "",
+            "width": video.get("width") or 0,
+            "height": video.get("height") or 0,
+        }
+        if video.get("hdrtype"):
+            details["hdrtype"] = video["hdrtype"]
+        list_item.addStreamInfo("video", details)
+    audio = item.get("audio") or {}
+    if audio.get("codec") or audio.get("channels"):
+        list_item.addStreamInfo("audio", {
+            "codec": audio.get("codec") or "",
+            "channels": audio.get("channels") or 0,
+            "language": audio.get("language") or "",
+        })
+
     # 已看 / 播放进度：Kodi 的 listitem 用 overlay 和 percent 属性
     if item.get("played"):
         list_item.setProperty("Overlay", "OverlayWatched.png")
@@ -129,3 +150,90 @@ def get_home_property(key: str) -> str:
         return xbmcgui.Window(10000).getProperty(key) or ""
     except Exception:  # noqa: BLE001
         return ""
+
+
+VIDEO_LIBRARY = {
+    "movies": ("VideoLibrary.GetMovies", "movies", "movieid"),
+    "tvshows": ("VideoLibrary.GetTVShows", "tvshows", "tvshowid"),
+    "episodes": ("VideoLibrary.GetEpisodes", "episodes", "episodeid"),
+}
+
+
+def video_items(kind: str) -> list:
+    """枚举 Kodi 库里某类条目：`[{"id": int, "imdb": str, "title": str}]`。
+
+    分批取（每批 1000），只为拿到「Kodi 内部 id ↔ IMDb」的对应关系。
+    失败返回空列表，不抛异常。
+    """
+    spec = VIDEO_LIBRARY.get(kind)
+    if not spec:
+        return []
+
+    method, key, id_field = spec
+    items = []
+    start = 0
+    try:
+        import json
+        import xbmc
+
+        while True:
+            payload = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": method,
+                "params": {
+                    "properties": ["uniqueid", "title"],
+                    "limits": {"start": start, "end": start + 1000},
+                },
+            }
+            raw = xbmc.executeJSONRPC(json.dumps(payload))
+            rows = (((json.loads(raw).get("result") or {}).get(key)) or [])
+            if not rows:
+                break
+            for row in rows:
+                items.append({
+                    "id": row.get(id_field) or 0,
+                    "imdb": ((row.get("uniqueid") or {}).get("imdb") or "").strip(),
+                    "title": row.get("title") or "",
+                })
+            if len(rows) < 1000:
+                break
+            start += 1000
+    except Exception:  # noqa: BLE001 - Kodi 不可用/库为空都按空处理
+        return items
+    return items
+
+
+def database_path(prefix: str = "MyVideos") -> str:
+    """返回版本号最大的 `<prefix><N>.db` 路径；找不到返回空串。"""
+    try:
+        import os
+        import re
+        import xbmcvfs
+
+        folder = xbmcvfs.translatePath("special://database/")
+        best, best_no = "", -1
+        for name in os.listdir(folder):
+            match = re.match(r"^%s(\d+)\.db$" % prefix, name, re.IGNORECASE)
+            if match and int(match.group(1)) > best_no:
+                best_no = int(match.group(1))
+                best = os.path.join(folder, name)
+        return best
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def refresh_ui() -> None:
+    """让界面重读数据库（评分行改动后调用）。
+
+    只发 Container.Refresh 不够：库目录的结果在 CDirectoryCache 里，外部直接改
+    sqlite 不会让它失效，皮肤拿到的还是旧的 VideoInfoTag（评分显示不出来）。
+    补一次增量扫描来清缓存——它只处理变化的文件，正常情况下几十秒内跑完。
+    """
+    try:
+        import xbmc
+
+        xbmc.executebuiltin("Container.Refresh")
+        xbmc.executebuiltin("UpdateLibrary(video)")
+    except Exception:  # noqa: BLE001
+        pass

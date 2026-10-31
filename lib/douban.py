@@ -55,6 +55,7 @@ PROP_RATING = "Mistuary.Rating.Douban"
 PROP_VOTES = "Mistuary.Rating.Votes"
 PROP_FETCHED = "Mistuary.Rating.FetchedAt"
 PROP_STATUS = "Mistuary.Rating.Status"
+PROP_SOURCE = "Mistuary.Rating.Source"
 
 # 皮肤在 onload 里写这两个属性：标题可能带逗号，走 RunScript 参数会被拆坏
 PROP_QUERY = "Mistuary.Rating.Query"
@@ -177,11 +178,37 @@ def fetch(imdb_id: str) -> tuple:
     return None, None
 
 
-def _write(status: str, rating: str = "", votes: str = "", fetched: str = "") -> None:
+def _write(status: str, rating: str = "", votes: str = "", fetched: str = "",
+           source: str = "") -> None:
     kodi.set_home_property(PROP_STATUS, status)
     kodi.set_home_property(PROP_RATING, rating)
     kodi.set_home_property(PROP_VOTES, votes)
     kodi.set_home_property(PROP_FETCHED, fetched)
+    kodi.set_home_property(PROP_SOURCE, source)
+
+
+def _emby_lookup(imdb_id: str):
+    """问 StrmAssistant 要这条的豆瓣分。
+
+    - 返回 dict：Emby 认识这条（`rating` 可能为 None = 有条目但没豆瓣分）
+    - 返回 None：Emby 不可用/不认识这条 → 调用方回退直连豆瓣
+    """
+    settings = config.read_settings()
+    server = config.ratings_server()
+    if server is None:
+        return None
+
+    from lib import emby
+
+    try:
+        data = emby.douban_ratings_by_imdb(server, [imdb_id])
+    except Exception as exc:  # noqa: BLE001 - 网络/解析异常一律回退
+        log.debug("emby douban lookup failed: %s" % exc)
+        return None
+
+    if data is None:
+        return None
+    return data.get(imdb_id.lower())
 
 
 def resolve_imdb(req) -> str:
@@ -218,12 +245,30 @@ def run_action(req) -> None:
         log.debug("douban: no imdb id and no title (dbid=%s)" % getattr(req, "dbid", ""))
         return
 
+    # 优先问 Emby（StrmAssistant）：数值与应用内主评分同源，且不额外触发豆瓣请求。
+    # 返回 None 表示 Emby 不认识这条/不可用 → 继续走下面的直连兜底。
+    if imdb_id and settings.get("douban_prefer_emby", True):
+        hit = _emby_lookup(imdb_id)
+        if hit is not None:
+            rating = hit.get("rating")
+            if rating is None:
+                _write("missing")
+                log.debug("douban: emby knows %s but has no rating" % imdb_id)
+                return
+            try:
+                text = "%.1f" % float(rating)
+            except (TypeError, ValueError):
+                text = str(rating)
+            _write("ok", text, str(int(hit.get("votes") or 0)), str(int(time.time())), "emby")
+            log.debug("douban via emby: %s -> %s" % (imdb_id, text))
+            return
+
     key = cache.make_key("douban", imdb_id) if imdb_id else cache.make_key("douban_title", title, year)
     cached = cache.get(key, DOUBAN_TTL)
     if cached is not None:
         if cached.get("status") == "ok":
             _write("ok", cached.get("rating", ""), str(cached.get("votes", "")),
-                   str(cached.get("ts", int(time.time()))))
+                   str(cached.get("ts", int(time.time()))), cached.get("source", "douban"))
         else:
             _write("missing")
         log.debug("douban cache hit: %s" % imdb_id)
@@ -248,6 +293,6 @@ def run_action(req) -> None:
         return
 
     rating = "%.1f" % average
-    cache.put(key, {"status": "ok", "rating": rating, "votes": votes, "ts": now})
-    _write("ok", rating, str(votes), str(now))
+    cache.put(key, {"status": "ok", "rating": rating, "votes": votes, "ts": now, "source": "douban"})
+    _write("ok", rating, str(votes), str(now), "douban")
     log.debug("douban ok: %s -> %s (%d votes)" % (imdb_id or ("title=" + title), rating, votes))

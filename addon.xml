@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="script.mistuary.helper"
        name="Mistuary Helper"
-       version="0.2.2"
+       version="0.3.0"
        provider-name="wabisabi926">
     <requires>
         <!-- Kodi 19+ 的 Python 3 接口。皮肤侧要求 Kodi 21+，这里放宽到 19 不影响。 -->
         <import addon="xbmc.python" version="3.0.1"/>
     </requires>
+    <!-- 后台服务：定时把 Emby 的豆瓣评分写进 Kodi 库（rating_type=douban）。 -->
+    <extension point="xbmc.service" library="service.py"/>
     <extension point="xbmc.python.pluginsource" library="default.py">
         <!-- provides=video：搜索结果要作为视频目录被 Kodi 识别。
              没有它，plugin:// 路径仍能打开，但 content type 未知，
@@ -18,11 +20,16 @@
     <extension point="xbmc.python.script" library="default.py">
         <provides>executable</provides>
     </extension>
+    <!-- 图标 / 背景由 tools/gen_assets.py 生成（沿用皮肤那套紫→青渐变，去掉底图里的文字） -->
+    <assets>
+        <icon>resources/icon.png</icon>
+        <fanart>resources/fanart.jpg</fanart>
+    </assets>
     <extension point="xbmc.addon.metadata">
         <summary lang="en_gb">Server-side search and Douban rating bridge for the Mistuary skin</summary>
         <summary lang="zh_cn">Mistuary 皮肤的服务端搜索与豆瓣评分桥</summary>
-        <description lang="en_gb">Optional add-on. Search uses the Emby server, so Chinese titles, original titles, full pinyin and initials work like in the Emby app. It also provides Douban ratings for the video info dialog. Without it the skin falls back to its own local search and hides the Douban capsule. Nothing is written to your library or settings.</description>
-        <description lang="zh_cn">可选插件。搜索走 Emby 服务端，支持中文标题、原名、全拼和首字母；详情页豆瓣评分也由它提供。不装时皮肤回退到自带的本地搜索，并隐藏豆瓣胶囊。不改媒体库、不改皮肤设置。</description>
+        <description lang="en_gb">Optional add-on. Search uses the Emby server, so Chinese titles, original titles, full pinyin and initials work like in the Emby app. Douban ratings are read from the StrmAssistant Emby plugin first (falling back to the public Douban API), and can optionally be written into the Kodi library as a separate "douban" rating so skins can tell Douban apart from TMDB/IMDb. The main rating is never changed.</description>
+        <description lang="zh_cn">可选插件。搜索走 Emby 服务端，支持中文标题、原名、全拼和首字母；详情页豆瓣评分优先从 StrmAssistant 插件读取（失败再回退豆瓣公开接口）。可选把豆瓣评分写入 Kodi 媒体库，作为独立的「豆瓣」评分，让皮肤能区分豆瓣与 TMDB/IMDb；不会改动主评分。</description>
         <disclaimer lang="zh_cn">只在本地读取 Emby 插件的服务器配置，令牌不会写入日志或缓存。</disclaimer>
         <language></language>
         <platform>all</platform>

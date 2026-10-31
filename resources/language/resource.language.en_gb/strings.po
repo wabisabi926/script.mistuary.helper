@@ -83,3 +83,35 @@ msgstr "Load more…"
 msgctxt "#32028"
 msgid "Cache cleared."
 msgstr "Cache cleared."
+
+msgctxt "#32030"
+msgid "Douban sync: {0} written, {1} removed."
+msgstr "Douban sync: {0} written, {1} removed."
+
+msgctxt "#32031"
+msgid "Douban sync failed ({0})."
+msgstr "Douban sync failed ({0})."
+
+msgctxt "#32032"
+msgid "Prefer Emby Douban rating"
+msgstr "Prefer Emby Douban rating"
+
+msgctxt "#32033"
+msgid "Sync Douban rating into library"
+msgstr "Sync Douban rating into library"
+
+msgctxt "#32034"
+msgid "Sync interval (hours)"
+msgstr "Sync interval (hours)"
+
+msgctxt "#32035"
+msgid "Sync Douban rating now"
+msgstr "Sync Douban rating now"
+
+msgctxt "#32036"
+msgid "Emby URL override"
+msgstr "Emby URL override"
+
+msgctxt "#32037"
+msgid "Emby API key override"
+msgstr "Emby API key override"

@@ -60,9 +60,11 @@ Kodi 21+ 的目录调用还会在 argv 末尾额外传一个 `resume:false`；0.
 ```
 RunScript(script.mistuary.helper,action=rating,type=movie,dbid=<Kodi 库 id>)
 RunScript(script.mistuary.helper,action=techflags,dbid=<剧集 id>)
+RunPlugin(plugin://script.mistuary.helper/?action=sync_ratings)
 ```
 
-`action=rating`（0.2.0+）写窗口属性；`action=techflags`（M3）暂缓，当前只记日志。
+`action=rating`（0.2.0+）写窗口属性；`action=techflags`（M3）暂缓，当前只记日志；
+`action=sync_ratings`（0.3.0+）立即把 Emby 的豆瓣分同步进 Kodi 库（与后台服务同一入口）。
 
 0.2.2 起，通过 `plugin://...?action=...` 调用时入口会补 `endOfDirectory`，不会再报
 `CGUIMediaWindow::GetDirectory(...) failed`；`RunScript` 没有 handle，不会触发收尾。
@@ -97,6 +99,7 @@ RunScript(script.mistuary.helper,action=techflags,dbid=<剧集 id>)
 | `Mistuary.Rating.Votes` | `123456` | 票数，可能为空 |
 | `Mistuary.Rating.FetchedAt` | `1793000000` | epoch，皮肤可用来判过期 |
 | `Mistuary.Rating.Status` | `ok` / `missing` / `error` | **皮肤只在 `ok` 时显示** |
+| `Mistuary.Rating.Source` | `emby` / `douban` | 0.3.0+：分数来自 StrmAssistant 还是回退直连 |
 
 **皮肤写给插件（兜底输入）**：
 
@@ -121,6 +124,26 @@ TvShowRepresentative.VideoCodec / AudioCodec / AudioChannels
 皮肤的 `VideoTechnicalFlagsByPrefix` 已有这组分支，**皮肤侧 0 改动**。
 
 限制：只对插件自己生成的列表有效。Kodi 库里的行拿不到 ListItem 引用。
+
+
+### 3.3 写 Kodi 库（豆瓣评分，0.3.0+）
+
+后台服务（启动 60 秒后、按设置的间隔）与 `action=sync_ratings` 会把豆瓣分写成
+Kodi 库里的独立评分记录：
+
+| 项 | 值 |
+|---|---|
+| 表 | `MyVideos<ver>.db` → `rating` |
+| `rating_type` | `douban` |
+| `rating` | 0–10，一位小数 |
+| `media_type` | `movie` / `tvshow` / `episode` |
+
+规则：
+
+- 只读 Emby 的 `/Douban/RatingsByImdb`，**不请求豆瓣**；
+- 主评分（`default` / `imdb`）**不改动**；
+- 值变化才写、豆瓣分消失则删除该行；单事务提交，失败只记日志；
+- 皮肤用 `ListItem.Rating(douban)` 判断「这条主评分是否来自豆瓣」。
 
 ## 四、降级表
 

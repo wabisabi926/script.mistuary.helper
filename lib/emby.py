@@ -31,6 +31,10 @@ FIELDS = ",".join([
     "BackdropImageTags",
     "ProviderIds",
     "UserData",
+    # 搜索结果的 hero 要显示 4K / HEVC / TRUEHD 那排技术标识，
+    # 皮肤读的是 ListItem.VideoResolution / VideoCodec / AudioCodec，
+    # 这些值只能来自 streamdetails —— 不请求 MediaSources 就永远是空的。
+    "MediaSources",
 ])
 
 TICKS_PER_MINUTE = 6000000  # Emby 的 RunTimeTicks 是 100ns 单位
@@ -74,6 +78,25 @@ def play_url(server, item_id: str) -> str:
     )
 
 
+def _hdr_type(video_range_type: str) -> str:
+    """Emby 的 VideoRangeType → Kodi 的 hdrtype 字符串（Kodi 21 的取值）。
+
+    认不出来就返回空串：Kodi 收到未知值会直接不认，不如不给。
+    """
+    value = (video_range_type or "").strip().upper()
+    if not value or value == "SDR":
+        return ""
+    if value.startswith("DOVI"):
+        return "dolbyvision"
+    if value in ("HDR10PLUS", "HDR10+"):
+        return "hdr10plus"
+    if value.startswith("HDR10"):
+        return "hdr10"
+    if value == "HLG":
+        return "hlg"
+    return ""
+
+
 def normalize(raw: dict) -> dict:
     """把 Emby 的 Item 压成渲染需要的字段。不含 token、不含完整图片地址。"""
     user_data = raw.get("UserData") or {}
@@ -85,6 +108,19 @@ def normalize(raw: dict) -> dict:
 
     provider_ids = raw.get("ProviderIds") or {}
     item_type = (raw.get("Type") or "").strip()
+
+    # 流信息：电影/单集有 MediaSources，剧集（Series）本身没有 —— 所以剧集行
+    # 在搜索页仍然拿不到技术标识，这不是皮肤的问题。
+    media_sources = raw.get("MediaSources")
+    if not isinstance(media_sources, list):
+        media_sources = []
+    streams = []
+    if media_sources and isinstance(media_sources[0], dict):
+        streams = media_sources[0].get("MediaStreams") or []
+    video_stream = next(
+        (s for s in streams if (s.get("Type") or "").lower() == "video"), {})
+    audio_stream = next(
+        (s for s in streams if (s.get("Type") or "").lower() == "audio"), {})
 
     # Emby 的 /Items?searchTerm= 返回的是 ImageTags.Primary，不是 PrimaryImageTag；
     # 老版本/别的端点才给 PrimaryImageTag。两个都认，先旧后新。
@@ -112,6 +148,18 @@ def normalize(raw: dict) -> dict:
         "position_ticks": user_data.get("PlaybackPositionTicks") or 0,
         "imdb": provider_ids.get("Imdb") or "",
         "tmdb": provider_ids.get("Tmdb") or "",
+        # 只保留渲染需要的几项，MediaStreams 原始结构不往外传
+        "video": {
+            "codec": (video_stream.get("Codec") or "").lower(),
+            "width": int(video_stream.get("Width") or 0),
+            "height": int(video_stream.get("Height") or 0),
+            "hdrtype": _hdr_type(video_stream.get("VideoRangeType") or ""),
+        } if video_stream else {},
+        "audio": {
+            "codec": (audio_stream.get("Codec") or "").lower(),
+            "channels": int(audio_stream.get("Channels") or 0),
+            "language": audio_stream.get("Language") or "",
+        } if audio_stream else {},
     }
 
 
@@ -155,6 +203,57 @@ def search(server, query: str, media_type: str, limit: int = 100, offset: int = 
     # 空结果也缓存：用户连续打字时不必每次都打服务端
     cache.put(key, items)
     return items
+
+
+RATINGS_BY_IMDB_PATH = "emby/Douban/RatingsByImdb"
+RATINGS_BATCH = 80
+
+
+def douban_ratings_by_imdb(server, imdbs, ttl: int = 600):
+    """按 IMDb 批量取豆瓣分（StrmAssistant 的 `/Douban/RatingsByImdb`）。
+
+    返回 `{imdb_lower: {"rating", "votes", "applied", "item_id", "subject_id"}}`。
+
+    - **请求失败返回 None**：调用方据此回退直连豆瓣；
+    - 返回空 dict 表示请求成功但 Emby 一条都不认识（可据此判断要不要回退）；
+    - 条目存在但没豆瓣分时，`rating` 为 None（调用方应显示「无豆瓣」而不是回退）。
+    """
+    wanted = sorted({(i or "").strip().lower() for i in imdbs if (i or "").strip()})
+    if not wanted:
+        return {}
+
+    result = {}
+    for start in range(0, len(wanted), RATINGS_BATCH):
+        batch = wanted[start:start + RATINGS_BATCH]
+        key = cache.make_key("emby_douban", server.server_id, *batch)
+        cached = cache.get(key, ttl)
+        if cached is not None:
+            result.update(cached)
+            continue
+
+        url = http.build_url(server.base_url, RATINGS_BY_IMDB_PATH, {"Ids": ",".join(batch)})
+        payload, resp = http.get_json(url, headers={"X-Emby-Token": server.token})
+        if payload is None:
+            log.error("douban ratings by imdb failed: status=%s error=%s" % (resp.status, resp.error))
+            return None
+
+        rows = {}
+        for row in payload.get("Ratings") or []:
+            imdb = (row.get("Imdb") or "").strip().lower()
+            if not imdb:
+                continue
+            rows[imdb] = {
+                "rating": row.get("Rating"),
+                "votes": row.get("Votes") or 0,
+                "applied": bool(row.get("Applied")),
+                "item_id": row.get("ItemId") or "",
+                "subject_id": row.get("SubjectId") or "",
+            }
+
+        cache.put(key, rows)
+        result.update(rows)
+
+    return result
 
 
 def _human_error(exc: EmbyError) -> str:

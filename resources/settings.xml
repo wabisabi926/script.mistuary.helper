@@ -6,9 +6,17 @@
         <setting id="page_size" type="number" label="32002" default="100" />
         <setting id="cache_ttl" type="number" label="32003" default="300" />
         <setting id="douban_enabled" type="bool" label="32004" default="true" />
+        <setting id="douban_prefer_emby" type="bool" label="32032" default="true" />
+        <setting id="rating_sync_enabled" type="bool" label="32033" default="true" />
+        <setting id="rating_sync_interval_hours" type="number" label="32034" default="6" />
+        <!-- 留空 = 用 E4K 配置的服务器；填写后只影响「查豆瓣分」，不影响搜索/E4K 同步。 -->
+        <setting id="emby_url_override" type="text" label="32036" default="" />
+        <setting id="emby_token_override" type="text" option="hidden" label="32037" default="" />
         <setting id="debug_log" type="bool" label="32005" default="false" />
     </category>
     <category label="32010">
+        <setting id="rating_sync_now" type="action" label="32035"
+                 action="RunPlugin(plugin://script.mistuary.helper/?action=sync_ratings)" />
         <setting id="clear_cache" type="action" label="32011"
                  action="RunPlugin(plugin://script.mistuary.helper/?action=clear_cache)" />
         <setting type="lsep" label="32012" />

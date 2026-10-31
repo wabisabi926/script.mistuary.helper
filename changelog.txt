@@ -1,3 +1,14 @@
+0.3.0 豆瓣评分优先读 Emby，并可同步进 Kodi 库
+[新增]
+- 详情页豆瓣分优先从 StrmAssistant 的 /Douban/RatingsByImdb 读取（与 Emby 主评分同源），
+  请求失败或 Emby 不认识该条目时才回退豆瓣公开接口
+- 后台服务（启动 60 秒后、按设置的间隔）把豆瓣分写成 Kodi 库的独立评分
+  （rating_type=douban），皮肤可逐条区分豆瓣与 TMDB/IMDb；不改动主评分
+- 设置新增：优先 Emby 评分、同步开关、同步间隔（默认 6 小时）、立即同步
+- 窗口属性新增 Mistuary.Rating.Source（emby / douban）
+[说明]
+- 只读 Emby，不额外请求豆瓣；写库失败只记日志，不弹框
+
 0.2.2 action 模式目录收尾
 [修复]
 - 修复 plugin://...?action=rating / action=techflags 调用时没有结束目录，

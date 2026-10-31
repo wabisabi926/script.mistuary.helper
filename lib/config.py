@@ -33,6 +33,11 @@ DEFAULTS = {
     "server_id": "",
     "page_size": 100,
     "douban_enabled": True,
+    "douban_prefer_emby": True,
+    "rating_sync_enabled": True,
+    "rating_sync_interval_hours": 6,
+    "emby_url_override": "",
+    "emby_token_override": "",
     "cache_ttl": 300,
     "debug_log": False,
 }
@@ -121,19 +126,43 @@ def find_server(server_id: str = "", profile: str | None = None) -> Server | Non
     return servers[0]
 
 
+def ratings_server(profile: str | None = None) -> Server | None:
+    """取「查豆瓣分」用的服务器。
+
+    设置里填了 URL + API Key 覆盖时优先用覆盖值（测试/多服务器场景），
+    否则回落到 E4K 配置的服务器。覆盖服务器的 user_id 为空，只用于评分查询。
+    """
+    values = read_settings()
+    url = (values.get("emby_url_override") or "").strip()
+    token = (values.get("emby_token_override") or "").strip()
+    if url and token:
+        return Server("override", "Override", url, token, "")
+    return find_server(values.get("server_id", ""), profile)
+
+
 def read_settings() -> dict:
     """读插件设置。任何一项读不到就用 DEFAULTS，不抛异常。"""
     values = dict(DEFAULTS)
     try:
         import xbmcaddon
 
-        addon = xbmcaddon.Addon()
+        addon = xbmcaddon.Addon("script.mistuary.helper")
         values["server_id"] = addon.getSettingString("server_id") or ""
         try:
             values["page_size"] = max(1, int(addon.getSettingInt("page_size") or DEFAULTS["page_size"]))
         except (TypeError, ValueError):
             pass
         values["douban_enabled"] = bool(addon.getSettingBool("douban_enabled"))
+        values["douban_prefer_emby"] = bool(addon.getSettingBool("douban_prefer_emby"))
+        values["rating_sync_enabled"] = bool(addon.getSettingBool("rating_sync_enabled"))
+        values["emby_url_override"] = (addon.getSettingString("emby_url_override") or "").strip()
+        values["emby_token_override"] = (addon.getSettingString("emby_token_override") or "").strip()
+        try:
+            hours = int(addon.getSettingInt("rating_sync_interval_hours") or
+                        DEFAULTS["rating_sync_interval_hours"])
+            values["rating_sync_interval_hours"] = max(1, min(24, hours))
+        except (TypeError, ValueError):
+            pass
         try:
             values["cache_ttl"] = max(0, int(addon.getSettingInt("cache_ttl") or DEFAULTS["cache_ttl"]))
         except (TypeError, ValueError):

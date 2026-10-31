@@ -83,3 +83,35 @@ msgstr "加载更多…"
 msgctxt "#32028"
 msgid "Cache cleared."
 msgstr "缓存已清空。"
+
+msgctxt "#32030"
+msgid "Douban sync: {0} written, {1} removed."
+msgstr "豆瓣评分同步：写入 {0} 条，删除 {1} 条。"
+
+msgctxt "#32031"
+msgid "Douban sync failed ({0})."
+msgstr "豆瓣评分同步失败（{0}）。"
+
+msgctxt "#32032"
+msgid "Prefer Emby Douban rating"
+msgstr "优先使用 Emby 的豆瓣评分"
+
+msgctxt "#32033"
+msgid "Sync Douban rating into library"
+msgstr "把豆瓣评分同步进媒体库"
+
+msgctxt "#32034"
+msgid "Sync interval (hours)"
+msgstr "同步间隔（小时）"
+
+msgctxt "#32035"
+msgid "Sync Douban rating now"
+msgstr "立即同步豆瓣评分"
+
+msgctxt "#32036"
+msgid "Emby URL override"
+msgstr "Emby 地址覆盖"
+
+msgctxt "#32037"
+msgid "Emby API key override"
+msgstr "Emby API Key 覆盖"

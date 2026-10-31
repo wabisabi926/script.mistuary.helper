@@ -22,7 +22,7 @@ def _enabled() -> bool:
         import xbmcaddon
 
         if _addon is None:
-            _addon = xbmcaddon.Addon()
+            _addon = xbmcaddon.Addon("script.mistuary.helper")
         _enabled_cache = bool(_addon.getSettingBool("debug_log"))
     except Exception:  # noqa: BLE001 - 设置读不到就静默
         _enabled_cache = False
