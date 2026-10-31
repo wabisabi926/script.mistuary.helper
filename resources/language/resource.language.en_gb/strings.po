@@ -97,8 +97,8 @@ msgid "Prefer Emby Douban rating"
 msgstr "Prefer Emby Douban rating"
 
 msgctxt "#32033"
-msgid "Sync Douban rating into library"
-msgstr "Sync Douban rating into library"
+msgid "Sync Douban rating into library (experimental)"
+msgstr "Sync Douban rating into library (experimental)"
 
 msgctxt "#32034"
 msgid "Sync interval (hours)"
@@ -115,3 +115,40 @@ msgstr "Emby URL override"
 msgctxt "#32037"
 msgid "Emby API key override"
 msgstr "Emby API key override"
+
+msgctxt "#32040"
+msgid "Server"
+msgstr "Server"
+
+msgctxt "#32041"
+msgid "Search"
+msgstr "Search"
+
+msgctxt "#32042"
+msgid "Douban rating"
+msgstr "Douban rating"
+
+msgctxt "#32043"
+msgid "Rating sync"
+msgstr "Rating sync"
+
+msgctxt "#32044"
+msgid "Logging & diagnostics"
+msgstr "Logging & diagnostics"
+
+msgctxt "#32045"
+msgid "Test Emby connection"
+msgstr "Test Emby connection"
+
+msgctxt "#32046"
+msgid "Experimental: writes ratings into the Kodi library; the skin does not read them yet."
+msgstr "Experimental: writes ratings into the Kodi library; the skin does not read them yet."
+
+msgctxt "#32047"
+msgid "Connected: {0}"
+msgstr "Connected: {0}"
+
+msgctxt "#32048"
+msgid "Connection failed: {0}"
+msgstr "Connection failed: {0}"
+

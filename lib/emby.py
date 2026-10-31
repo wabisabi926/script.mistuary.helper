@@ -31,6 +31,8 @@ FIELDS = ",".join([
     "BackdropImageTags",
     "ProviderIds",
     "UserData",
+    "SortName",
+    "OriginalTitle",
     # 搜索结果的 hero 要显示 4K / HEVC / TRUEHD 那排技术标识，
     # 皮肤读的是 ListItem.VideoResolution / VideoCodec / AudioCodec，
     # 这些值只能来自 streamdetails —— 不请求 MediaSources 就永远是空的。
@@ -134,6 +136,8 @@ def normalize(raw: dict) -> dict:
     return {
         "id": raw.get("Id") or "",
         "name": raw.get("Name") or "",
+        "sort_name": raw.get("SortName") or "",
+        "original_title": raw.get("OriginalTitle") or "",
         "type": item_type,
         "is_folder": item_type == "Series",
         "year": raw.get("ProductionYear") or 0,
@@ -163,6 +167,24 @@ def normalize(raw: dict) -> dict:
     }
 
 
+# 首字母严格性：纯 ASCII、2–4 字看成拼音首字母（如 RZD），要求 SortName 前缀命中，
+# 避免 RZD 把 JQRZDY（机器人总动员）也捞出来。更长的是全拼，交给服务端匹配，不做过滤。
+STRICT_MAX_LEN = 4
+
+
+def _is_strict_query(query: str) -> bool:
+    query = (query or "").strip()
+    return 2 <= len(query) <= STRICT_MAX_LEN and query.isascii() and query.isalnum()
+
+
+def _strict_keep(item: dict, query: str) -> bool:
+    q = query.strip().lower()
+    name = (item.get("name") or "").lower()
+    original = (item.get("original_title") or "").lower()
+    sort_name = (item.get("sort_name") or "").lower()
+    return q in name or q in original or sort_name.startswith(q)
+
+
 def search(server, query: str, media_type: str, limit: int = 100, offset: int = 0,
            ttl: int = 300) -> list[dict]:
     """调 Emby 搜索，返回规范化后的条目列表。
@@ -173,7 +195,7 @@ def search(server, query: str, media_type: str, limit: int = 100, offset: int = 
     if not item_type:
         raise EmbyError("unknown media type: %s" % media_type)
 
-    key = cache.make_key("search", server.server_id, media_type, query, offset, limit)
+    key = cache.make_key("search_v2", server.server_id, media_type, query, offset, limit)
     cached = cache.get(key, ttl)
     if cached is not None:
         log.debug("search cache hit: %s / %s" % (media_type, query))
@@ -198,6 +220,8 @@ def search(server, query: str, media_type: str, limit: int = 100, offset: int = 
 
     raw_items = payload.get("Items") or []
     items = [normalize(item) for item in raw_items if item.get("Id")]
+    if _is_strict_query(query):
+        items = [item for item in items if _strict_keep(item, query)]
     log.debug("search %s / %r -> %d items" % (media_type, query, len(items)))
 
     # 空结果也缓存：用户连续打字时不必每次都打服务端
@@ -205,8 +229,102 @@ def search(server, query: str, media_type: str, limit: int = 100, offset: int = 
     return items
 
 
+# 非 ASCII 查询（中文名 / 类型词）才做人员与类型并集；纯字母走标题，避免 JW 之类炸出
+# 一堆人的全部作品。单字查询也不扩展，噪音和请求量都不划算。
+EXTRA_MIN_QUERY = 2
+EXTRA_PERSON_LIMIT = 5
+EXTRA_GENRE_LIMIT = 5
+EXTRA_ITEM_LIMIT = 100
+
+
+def _is_expandable_query(query: str) -> bool:
+    query = (query or "").strip()
+    return len(query) >= EXTRA_MIN_QUERY and any(ord(ch) > 127 for ch in query)
+
+
+def _lookup_ids(server, path: str, query: str, limit: int) -> list:
+    """查 Persons / Genres 的 Id 列表；失败返回空（扩展失败不能拖垮标题搜索）。"""
+    url = http.build_url(server.base_url, path, {
+        "searchTerm": query,
+        "Limit": limit,
+        "Fields": "Id",
+    })
+    payload, resp = http.get_json(url, headers={"X-Emby-Token": server.token})
+    if payload is None:
+        log.debug("extra lookup %s failed: status=%s" % (path, resp.status))
+        return []
+    return [item.get("Id") for item in payload.get("Items") or [] if item.get("Id")]
+
+
+def _items_by_ids(server, param: str, ids: list, item_type: str) -> list:
+    if not ids:
+        return []
+    url = http.build_url(server.base_url, "emby/Items", {
+        param: ",".join(ids),
+        "Recursive": "true",
+        "IncludeItemTypes": item_type,
+        "Fields": FIELDS,
+        "ImageTypeLimit": 1,
+        "EnableImageTypes": "Primary,Backdrop",
+        "Limit": EXTRA_ITEM_LIMIT,
+        "UserId": server.user_id,
+    })
+    payload, resp = http.get_json(url, headers={"X-Emby-Token": server.token})
+    if payload is None:
+        log.debug("extra items by %s failed: status=%s" % (param, resp.status))
+        return []
+    return [normalize(item) for item in payload.get("Items") or [] if item.get("Id")]
+
+
+def search_page(server, query: str, media_type: str, limit: int = 100, offset: int = 0,
+                ttl: int = 300) -> tuple:
+    """搜索一页：返回 (条目列表, 标题命中数)。
+
+    - 标题结果照旧分页；非 ASCII 查询在**第一页**额外并入演员作品与类型作品；
+    - 第二页起只返回标题结果（offset>0 不再扩展）；
+    - 标题命中数是「加载更多」的依据，避免并入的额外条目把 offset 算错。
+    """
+    title_items = search(server, query, media_type, limit=limit, offset=offset, ttl=ttl)
+    if offset > 0 or not _is_expandable_query(query):
+        return title_items, len(title_items)
+
+    key = cache.make_key("search_merged", server.server_id, media_type, query, limit)
+    cached = cache.get(key, ttl)
+    if cached is not None:
+        return cached.get("items", []), cached.get("title_count", 0)
+
+    item_type = TYPE_MAP.get(media_type)
+    persons = _lookup_ids(server, "emby/Persons", query.strip(), EXTRA_PERSON_LIMIT)
+    genres = _lookup_ids(server, "emby/Genres", query.strip(), EXTRA_GENRE_LIMIT)
+    extras = _items_by_ids(server, "PersonIds", persons, item_type)
+    extras += _items_by_ids(server, "GenreIds", genres, item_type)
+
+    merged, seen = [], set()
+    for item in title_items + extras:
+        if item["id"] in seen:
+            continue
+        seen.add(item["id"])
+        merged.append(item)
+
+    cache.put(key, {"items": merged, "title_count": len(title_items)})
+    log.debug("search merged %s / %r -> %d (+%d extras)" % (
+        media_type, query, len(merged), len(merged) - len(title_items)))
+    return merged, len(title_items)
+
+
 RATINGS_BY_IMDB_PATH = "emby/Douban/RatingsByImdb"
 RATINGS_BATCH = 80
+
+
+def test_connection(server) -> tuple:
+    """探测服务器是否可达、令牌是否有效。返回 (ok, 说明)。"""
+    url = http.build_url(server.base_url, "emby/System/Info")
+    payload, resp = http.get_json(url, headers={"X-Emby-Token": server.token})
+    if payload is None:
+        return False, resp.error or ("HTTP %s" % resp.status)
+    name = payload.get("ServerName") or payload.get("Name") or server.name
+    version = payload.get("Version") or ""
+    return True, ("%s %s" % (name, version)).strip()
 
 
 def douban_ratings_by_imdb(server, imdbs, ttl: int = 600):
@@ -283,10 +401,10 @@ def render_search(handle: int, base_url: str, req) -> bool:
         return True
 
     try:
-        items = search(server, req.query, req.type or "movies",
-                       limit=settings.get("page_size", 100),
-                       offset=req.offset,
-                       ttl=settings.get("cache_ttl", 300))
+        items, title_count = search_page(server, req.query, req.type or "movies",
+                                         limit=settings.get("page_size", 100),
+                                         offset=req.offset,
+                                         ttl=settings.get("cache_ttl", 300))
     except EmbyError as exc:
         kodi.add_notice(handle, base_url, _human_error(exc))
         return True
@@ -310,15 +428,15 @@ def render_search(handle: int, base_url: str, req) -> bool:
                 item["id"], server.server_id)
         xbmcplugin.addDirectoryItem(handle, target, list_item, isFolder=item["is_folder"])
 
-    # 分页：这一页满了就再给一条「加载更多」
-    if len(items) >= settings.get("page_size", 100):
+    # 分页：标题结果这一页满了就再给一条「加载更多」；并入的额外条目不参与 offset 计算
+    if title_count >= settings.get("page_size", 100):
         from lib import router
 
         more = xbmcgui.ListItem(label=i18n.t(32027), offscreen=True)
         xbmcplugin.addDirectoryItem(
             handle,
             router.build_search_url(base_url, req.type or "movies", req.query,
-                                    req.offset + len(items)),
+                                    req.offset + title_count),
             more,
             isFolder=True,
         )

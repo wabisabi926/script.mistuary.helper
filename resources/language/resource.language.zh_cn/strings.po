@@ -97,8 +97,8 @@ msgid "Prefer Emby Douban rating"
 msgstr "优先使用 Emby 的豆瓣评分"
 
 msgctxt "#32033"
-msgid "Sync Douban rating into library"
-msgstr "把豆瓣评分同步进媒体库"
+msgid "Sync Douban rating into library (experimental)"
+msgstr "把豆瓣评分同步进媒体库（实验性）"
 
 msgctxt "#32034"
 msgid "Sync interval (hours)"
@@ -115,3 +115,40 @@ msgstr "Emby 地址覆盖"
 msgctxt "#32037"
 msgid "Emby API key override"
 msgstr "Emby API Key 覆盖"
+
+msgctxt "#32040"
+msgid "Server"
+msgstr "服务器"
+
+msgctxt "#32041"
+msgid "Search"
+msgstr "搜索"
+
+msgctxt "#32042"
+msgid "Douban rating"
+msgstr "豆瓣评分"
+
+msgctxt "#32043"
+msgid "Rating sync"
+msgstr "评分同步"
+
+msgctxt "#32044"
+msgid "Logging & diagnostics"
+msgstr "日志与诊断"
+
+msgctxt "#32045"
+msgid "Test Emby connection"
+msgstr "测试 Emby 连接"
+
+msgctxt "#32046"
+msgid "Experimental: writes ratings into the Kodi library; the skin does not read them yet."
+msgstr "实验性：写入 Kodi 媒体库，皮肤当前不读取。"
+
+msgctxt "#32047"
+msgid "Connected: {0}"
+msgstr "连接成功：{0}"
+
+msgctxt "#32048"
+msgid "Connection failed: {0}"
+msgstr "连接失败：{0}"
+

@@ -23,7 +23,6 @@ script.mistuary.helper/
 │   ├── emby.py                Emby 客户端 + 结果映射 + 渲染
 │   ├── kodi.py                ListItem 构造、窗口属性桥
 │   ├── douban.py              M2：豆瓣取分
-│   └── techflags.py           M3：代表集标识（暂缓，空壳）
 ├── resources/
 │   ├── settings.xml
 │   └── language/{en_gb,zh_cn}/strings.po

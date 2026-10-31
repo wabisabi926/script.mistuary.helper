@@ -34,7 +34,7 @@ DEFAULTS = {
     "page_size": 100,
     "douban_enabled": True,
     "douban_prefer_emby": True,
-    "rating_sync_enabled": True,
+    "rating_sync_enabled": False,
     "rating_sync_interval_hours": 6,
     "emby_url_override": "",
     "emby_token_override": "",

@@ -48,6 +48,25 @@ def main():
         kodi.end_directory(HANDLE)
         return
 
+    if req.action == "test_connection":
+        from lib import config, emby
+
+        server = config.find_server(config.read_settings().get("server_id", ""))
+        if server is None:
+            xbmcgui.Dialog().notification(
+                ADDON.getAddonInfo("name"), i18n.t(32021),
+                xbmcgui.NOTIFICATION_WARNING, 4000
+            )
+        else:
+            ok, detail = emby.test_connection(server)
+            message = i18n.t(32047, detail) if ok else i18n.t(32048, detail)
+            xbmcgui.Dialog().notification(
+                ADDON.getAddonInfo("name"), message,
+                xbmcgui.NOTIFICATION_INFO if ok else xbmcgui.NOTIFICATION_WARNING, 4000
+            )
+        kodi.end_directory(HANDLE)
+        return
+
     if req.action == "sync_ratings":
         # 手动同步：把 Emby 的豆瓣分写进 Kodi 库（后台服务也走同一入口）。
         from lib import rating_sync

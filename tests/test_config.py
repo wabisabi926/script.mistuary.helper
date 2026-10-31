@@ -116,6 +116,10 @@ class ServerDiscoveryTest(unittest.TestCase):
         text = repr(config.load_servers(self.profile)[0])
         self.assertNotIn("t" * 32, text)
 
+    def test_rating_sync_is_off_by_default(self):
+        """同步会写 Kodi 媒体库，而皮肤当前不读；默认必须是关的。"""
+        self.assertFalse(config.DEFAULTS["rating_sync_enabled"])
+
 
 if __name__ == "__main__":
     unittest.main()
