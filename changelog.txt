@@ -1,3 +1,10 @@
+0.3.1 豆瓣标题兜底与测试桩
+[修复]
+- 剧集 / IMDb 查不到结果时改用标题+年份在豆瓣搜索，避免详情页豆瓣胶囊缺失
+[其它]
+- 移除 techflags 空壳（M3 不做），同步删除对应 action 路由
+- 新增 tests/conftest.py 注入 Kodi 模块桩，91 项测试本地/CI 全绿
+
 0.3.0 豆瓣评分优先读 Emby，并可同步进 Kodi 库
 [新增]
 - 详情页豆瓣分优先从 StrmAssistant 的 /Douban/RatingsByImdb 读取（与 Emby 主评分同源），
