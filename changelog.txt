@@ -1,3 +1,8 @@
+0.3.2 CI 测试修复
+[修复]
+- 无 Kodi 环境（CI / 单测）下 profile 与 cache 目录退回临时目录，unittest 不再因缺少 xbmcvfs 失败
+- 移除 pytest 专用 conftest，改由生产代码兜底，本地 pytest 与 CI unittest 结果一致
+
 0.3.1 豆瓣标题兜底与测试桩
 [修复]
 - 剧集 / IMDb 查不到结果时改用标题+年份在豆瓣搜索，避免详情页豆瓣胶囊缺失

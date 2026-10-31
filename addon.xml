@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="script.mistuary.helper"
        name="Mistuary Helper"
-       version="0.3.1"
+       version="0.3.2"
        provider-name="wabisabi926">
     <requires>
         <!-- Kodi 19+ 的 Python 3 接口。皮肤侧要求 Kodi 21+，这里放宽到 19 不影响。 -->
