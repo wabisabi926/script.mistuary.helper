@@ -15,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import tempfile
 import time
 
 ADDON_ID = "script.mistuary.helper"
@@ -22,10 +23,13 @@ DEFAULT_TTL = 300
 
 
 def cache_dir() -> str:
-    """缓存目录，不存在就建。抽成函数方便测试替换。"""
-    import xbmcvfs
+    """缓存目录，不存在就建。没有 Kodi（单测/CI）时退回临时目录。"""
+    try:
+        import xbmcvfs
 
-    path = xbmcvfs.translatePath("special://profile/addon_data/%s/cache" % ADDON_ID)
+        path = xbmcvfs.translatePath("special://profile/addon_data/%s/cache" % ADDON_ID)
+    except Exception:  # noqa: BLE001 - 无 Kodi 环境
+        path = os.path.join(tempfile.gettempdir(), "mistuary-helper-cache")
     if not os.path.isdir(path):
         os.makedirs(path, exist_ok=True)
     return path

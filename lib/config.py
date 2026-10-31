@@ -66,10 +66,17 @@ class Server(object):
 
 
 def profile_dir() -> str:
-    """Kodi 的 userdata 目录。抽成函数方便测试替换。"""
-    import xbmcvfs
+    """Kodi 的 userdata 目录。没有 Kodi（单测/CI）时退回临时目录，不让导入直接炸。"""
+    try:
+        import xbmcvfs
 
-    return xbmcvfs.translatePath("special://profile")
+        return xbmcvfs.translatePath("special://profile")
+    except Exception:  # noqa: BLE001 - 无 Kodi 环境
+        import tempfile
+
+        path = os.path.join(tempfile.gettempdir(), "mistuary-helper-profile")
+        os.makedirs(path, exist_ok=True)
+        return path
 
 
 def _pick_address(data: dict) -> str:
