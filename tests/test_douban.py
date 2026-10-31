@@ -163,6 +163,13 @@ class RunActionTest(unittest.TestCase):
         self.assertEqual(self.written[douban.PROP_STATUS], "ok")
         self.assertEqual(self.written[douban.PROP_RATING], "9.0")
 
+    def test_title_fallback_when_imdb_misses(self):
+        with mock.patch.object(douban, "resolve_imdb", return_value="tt5311514"),              mock.patch.object(douban, "fetch", return_value=(None, None)),              mock.patch.object(douban, "_frodo_by_title", return_value=(8.4, 20)) as by_title,              mock.patch.object(douban.cache, "get", return_value=None),              mock.patch.object(douban.cache, "put"):
+            douban.run_action(Req(imdb="tt5311514", title="你的名字", year="2016"))
+        by_title.assert_called_once_with("你的名字", "2016")
+        self.assertEqual(self.written[douban.PROP_STATUS], "ok")
+        self.assertEqual(self.written[douban.PROP_RATING], "8.4")
+
     def test_cached_ok_is_reused(self):
         cached = {"status": "ok", "rating": "8.6", "votes": 123, "ts": 1}
         with mock.patch.object(douban, "resolve_imdb", return_value="tt1340507"), \

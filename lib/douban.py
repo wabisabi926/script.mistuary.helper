@@ -282,6 +282,10 @@ def run_action(req) -> None:
 
     if imdb_id:
         average, votes = fetch(imdb_id)
+        # 豆瓣 legacy/frodo 对剧集（TV）按 IMDb 经常查不到，退回标题+年份匹配
+        if average is None and title:
+            log.debug("douban: imdb %s missed, retry by title %r" % (imdb_id, title))
+            average, votes = _frodo_by_title(title, year) or (None, None)
     else:
         average, votes = _frodo_by_title(title, year) or (None, None)
     now = int(time.time())

@@ -48,14 +48,6 @@ def main():
         kodi.end_directory(HANDLE)
         return
 
-    if req.action == "techflags":
-        # M3 暂缓：当前只记日志。
-        from lib import techflags
-
-        techflags.run_action(req)
-        kodi.end_directory(HANDLE)
-        return
-
     if req.action == "sync_ratings":
         # 手动同步：把 Emby 的豆瓣分写进 Kodi 库（后台服务也走同一入口）。
         from lib import rating_sync

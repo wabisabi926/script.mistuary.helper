@@ -20,7 +20,7 @@
 | 豆瓣评分 | ✅ | IMDb 优先，dbid 反查，标题 + 年份兜底；7 天缓存 |
 | action 模式 | ✅ 0.2.2 | `plugin://...?action=...` 会补 `endOfDirectory`；`RunScript` handle=-1 不调 |
 | 演员 / 导演 / 类型 / 别名 / 分词 | ❌ | M1d 暂缓 |
-| 代表集技术标识 | ❌ | M3 明确不做，`techflags.py` 只记日志 |
+| 代表集技术标识 | ❌ | M3 明确不做，插件侧已移除空壳 |
 | 播放地址 | ✅ 实机通过 | `mode=play` 直连 Emby 插件，2026-10-30 验收；直链兜底不需要 |
 
 ## 3. 已修复的两个 Kodi 偶发问题
@@ -40,7 +40,7 @@ Kodi 21+ 的目录调用会在 `sys.argv` 末尾多传一个 `resume:false`。�
 Kodi 日志报 `CGUIMediaWindow::GetDirectory(...) failed`。
 
 现在 `lib.kodi.end_directory(handle)`：`handle < 0` 直接返回，目录调用才收尾；
-`default.py` 的 rating / techflags / clear_cache / 兜底分支都调用。回归测试
+`default.py` 的 rating / clear_cache / 兜底分支都调用。回归测试
 `tests/test_default.py` 钉住两种调用形态。
 
 ## 4. 已知问题（交接重点）
@@ -129,7 +129,6 @@ push 到 `main` 且版本号变化时 CI 自动打包。不要手工打 zip。
 | `lib/kodi.py` | ListItem、窗口属性、目录收尾 |
 | `lib/cache.py` | 磁盘缓存（不含 token） |
 | `lib/log.py` / `lib/i18n.py` | 日志 / 本地化 |
-| `lib/techflags.py` | M3 空壳，只记日志 |
 | `tests/` | 82 项单测，HTTP 全 mock |
 
 ## 8. 安全与隐私

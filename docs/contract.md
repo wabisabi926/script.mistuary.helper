@@ -59,11 +59,10 @@ Kodi 21+ 的目录调用还会在 argv 末尾额外传一个 `resume:false`；0.
 
 ```
 RunScript(script.mistuary.helper,action=rating,type=movie,dbid=<Kodi 库 id>)
-RunScript(script.mistuary.helper,action=techflags,dbid=<剧集 id>)
 RunPlugin(plugin://script.mistuary.helper/?action=sync_ratings)
 ```
 
-`action=rating`（0.2.0+）写窗口属性；`action=techflags`（M3）暂缓，当前只记日志；
+`action=rating`（0.2.0+）写窗口属性；
 `action=sync_ratings`（0.3.0+）立即把 Emby 的豆瓣分同步进 Kodi 库（与后台服务同一入口）。
 
 0.2.2 起，通过 `plugin://...?action=...` 调用时入口会补 `endOfDirectory`，不会再报

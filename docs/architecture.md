@@ -47,7 +47,6 @@ default.py ── router.parse() ──> Request(mode, type, query, offset…)
    │                     └─ kodi.apply_video_info() + addDirectoryItem
    │
    ├─ action=rating ──> douban.run_action()       （M2）
-   ├─ action=techflags ─> techflags.run_action()  （M3 暂缓）
    └─ action=clear_cache ─> cache.clear()
 ```
 
