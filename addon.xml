@@ -17,12 +17,6 @@
     <extension point="xbmc.python.script" library="default.py">
         <provides>executable</provides>
     </extension>
-    <!-- 图标 / 背景由 tools/gen_assets.py 生成到 resources/（脚本的 --out 默认值）。
-         这里必须写全相对路径：根目录下没有这两个文件。 -->
-    <assets>
-        <icon>resources/icon.png</icon>
-        <fanart>resources/fanart.jpg</fanart>
-    </assets>
     <extension point="xbmc.addon.metadata">
         <summary lang="en_gb">Server-side search and Douban rating bridge for the Mistuary skin</summary>
         <summary lang="zh_cn">Mistuary 皮肤的服务端搜索与豆瓣评分桥</summary>
@@ -35,5 +29,13 @@
         <forum></forum>
         <website></website>
         <source></source>
+        <!-- 图标 / 背景由 tools/gen_assets.py 生成到 resources/。
+             <assets> 必须放在 xbmc.addon.metadata 这个 extension 内部 ——
+             放到 extension 外面 Kodi 不解析，只能靠 addon 根目录的同名
+             icon.png / fanart.jpg 兜底，一旦根目录没有就全空。 -->
+        <assets>
+            <icon>resources/icon.png</icon>
+            <fanart>resources/fanart.jpg</fanart>
+        </assets>
     </extension>
 </addon>
