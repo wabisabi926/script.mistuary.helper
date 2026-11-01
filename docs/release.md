@@ -72,7 +72,6 @@ git ls-remote --tags origin | tail -5
 | 0.2.1 | 修复 `resume:false` 污染搜索词 |
 | 0.2.2 | 修复 action 模式 `GetDirectory failed` |
 | 0.3.2 | CI / 无 Kodi 环境单测修复 |
+| 0.3.4 | 播放列表补全（含 0.3.3 的设置整理与搜索补齐） |
 
-**待发**：`0.3.4`（含 0.3.3 的设置整理与搜索补齐 + 播放列表补全）。
-发布前确认 `addon.xml` 与 `changelog.txt` 顶部都是 0.3.4，再按 §3 push；
-CI 会自动创建 `v0.3.4` Release。
+`0.3.4` 已发布，Release 由 CI 在 push 时自动创建；后续改动升 patch 再发。
