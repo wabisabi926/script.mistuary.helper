@@ -26,7 +26,7 @@ script.mistuary.helper/
 ├── resources/
 │   ├── settings.xml
 │   └── language/{en_gb,zh_cn}/strings.po
-└── tests/                     6 个文件，82 项
+└── tests/                     7 个文件，132 项
 ```
 
 ## 数据流
@@ -72,8 +72,11 @@ default.py ── router.parse() ──> Request(mode, type, query, offset…)
 
 ### 3. 无状态
 
-没有常驻 `service.py`、没有内存单例。每次调用重新读配置、重新查缓存。
-代价是每次多几十毫秒读文件，换来的是：少一个常驻线程、少一类崩溃面、用户改设置立刻生效。
+搜索 / 评分路径没有内存单例，每次调用重新读配置、重新查缓存。
+代价是每次多几十毫秒读文件，换来的是：少一类崩溃面、用户改设置立刻生效。
+
+0.3.4 起新增事件驱动的 `service.py`，只做**播放列表补全**：不轮询、不缓存，
+两个开关默认关；都关时 `onAVStarted` 立即返回，等同于没有这个服务。
 
 ## 为什么某些模块不 import xbmc
 

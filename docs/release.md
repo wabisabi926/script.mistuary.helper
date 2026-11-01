@@ -10,7 +10,7 @@
 ## 2. 发版前自检
 
 ```bash
-python -m unittest discover -s tests -p 'test_*.py'   # 当前 82 项
+python -m unittest discover -s tests -p 'test_*.py'   # 当前 132 项
 python -m compileall -q default.py lib
 ```
 
@@ -59,6 +59,7 @@ git ls-remote --tags origin | tail -5
 | 服务端搜索 | 0.1.0（0.2.1 修 `resume:false`） |
 | 详情页豆瓣 | 0.2.0 |
 | action 目录收尾 | 0.2.2 |
+| 播放列表补全（同季 / 同目录） | 0.3.4 |
 | 代表集标识 | 不适用（M3 暂缓） |
 
 皮肤只做 `AddonIsEnabled` 软探测，不比较版本；旧版插件不写新属性，皮肤自然隐藏。
@@ -70,3 +71,8 @@ git ls-remote --tags origin | tail -5
 | 0.2.0 | 豆瓣评分 M2 |
 | 0.2.1 | 修复 `resume:false` 污染搜索词 |
 | 0.2.2 | 修复 action 模式 `GetDirectory failed` |
+| 0.3.2 | CI / 无 Kodi 环境单测修复 |
+
+**待发**：`0.3.4`（含 0.3.3 的设置整理与搜索补齐 + 播放列表补全）。
+发布前确认 `addon.xml` 与 `changelog.txt` 顶部都是 0.3.4，再按 §3 push；
+CI 会自动创建 `v0.3.4` Release。

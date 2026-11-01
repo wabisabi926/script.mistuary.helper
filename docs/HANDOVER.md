@@ -1,12 +1,12 @@
-# 交接说明（Mistuary Helper 0.3.3）
+# 交接说明（Mistuary Helper 0.3.4）
 
 > 接手先读这份，再看 `contract.md`（皮肤接口）和 `roadmap.md`（还剩什么）。
 > 本文只讲现状、已知问题、验证入口和发版，不讲历史演进。
 
 ## 1. 一句话现状
 
-`script.mistuary.helper` 是 Mistuary 皮肤的**可选**配套插件，当前 **0.3.3**，
-101 项单测全绿，已发布 `v0.2.0` / `v0.2.1` / `v0.2.2` / `v0.3.2`，`v0.3.3` 待发。
+`script.mistuary.helper` 是 Mistuary 皮肤的**可选**配套插件，当前 **0.3.4**，
+132 项单测全绿，已发布 `v0.2.0` / `v0.2.1` / `v0.2.2` / `v0.3.2`，`v0.3.4` 待发（含 0.3.3 改动）。
 搜索和豆瓣评分主路径已接在皮肤 `main`，**M1c 已于 2026-10-30 实机验收通过**（含播放）；
 搜索结果的**真海报与真背景图**已于 2026-10-30 修好（`c4ac966`），实机确认正常。
 
@@ -14,6 +14,12 @@
 > 覆盖项收进专家）、**移除评分同步**（`service.py` / `lib/rating_sync.py` 已删，
 > 写库的 `rating_type=douban` 在皮肤侧没有消费方）、搜索并入中文演员名与类型、
 > 首字母改前缀严格匹配、修掉 `<assets>` 放错层级导致图标/背景不显示。
+
+> **0.3.4 的变化**：新增事件驱动的 `service.py` 做**播放列表补全**（两个独立开关：
+> 媒体库剧集按季补全 / 文件夹播放按目录补全，视频与音乐都支持，默认关；只加队列、不打断当前播放）。
+> 音频按当前播放器自动选队列，m4a / flac 等同目录音乐可补；电影 `season=-1` 与 HTTP 流目录列举报错已修。
+> 0.3.3 删除的是评分同步的常驻服务，
+> 与这个服务无关；两个开关都关时 `onAVStarted` 立即返回，行为与未安装一致。
 
 ## 2. 当前能力
 
@@ -27,6 +33,7 @@
 | 演员 / 导演 / 类型 / 别名 / 分词 | ❌ | M1d 暂缓 |
 | 代表集技术标识 | ❌ | M3 明确不做，插件侧已移除空壳 |
 | 播放地址 | ✅ 实机通过 | `mode=play` 直连 Emby 插件，2026-10-30 验收；直链兜底不需要 |
+| 播放列表补全 | ✅ 0.3.4 | 两个独立开关：媒体库剧集按季补全 / 文件夹播放按目录补全（视频与音乐）；默认关，只加不播 |
 
 ## 3. 已修复的两个 Kodi 偶发问题
 
@@ -105,7 +112,7 @@ Kodi 日志报 `CGUIMediaWindow::GetDirectory(...) failed`。
 
 ```bash
 cd D:/下载/AI/script.mistuary.helper
-python -m unittest discover -s tests -p 'test_*.py'   # 82 项
+python -m unittest discover -s tests -p 'test_*.py'   # 132 项
 python -m compileall -q default.py lib
 ```
 
@@ -134,7 +141,7 @@ push 到 `main` 且版本号变化时 CI 自动打包。不要手工打 zip。
 | `lib/kodi.py` | ListItem、窗口属性、目录收尾 |
 | `lib/cache.py` | 磁盘缓存（不含 token） |
 | `lib/log.py` / `lib/i18n.py` | 日志 / 本地化 |
-| `tests/` | 82 项单测，HTTP 全 mock |
+| `tests/` | 132 项单测，HTTP 全 mock |
 
 ## 8. 安全与隐私
 
