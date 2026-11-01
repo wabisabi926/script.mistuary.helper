@@ -62,6 +62,21 @@
             </group>
         </category>
 
+        <category id="playback" label="32043" help="">
+            <group id="1" label="32060">
+                <setting id="playlist_completion_season" type="boolean" label="32063" help="32061">
+                    <level>0</level>
+                    <default>false</default>
+                    <control type="toggle"/>
+                </setting>
+                <setting id="playlist_completion_folder" type="boolean" label="32064" help="32065">
+                    <level>0</level>
+                    <default>false</default>
+                    <control type="toggle"/>
+                </setting>
+            </group>
+        </category>
+
         <category id="douban" label="32042" help="">
             <group id="1" label="32042">
                 <setting id="douban_enabled" type="boolean" label="32004" help="32056">

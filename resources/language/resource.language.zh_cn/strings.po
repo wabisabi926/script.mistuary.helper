@@ -92,6 +92,10 @@ msgctxt "#32042"
 msgid "Douban rating"
 msgstr "豆瓣评分"
 
+msgctxt "#32043"
+msgid "Playback"
+msgstr "播放列表"
+
 msgctxt "#32044"
 msgid "Logging & diagnostics"
 msgstr "日志与诊断"
@@ -147,3 +151,23 @@ msgstr "在 kodi.log 输出 MISTUARY.HELPER 日志，排查问题用。"
 msgctxt "#32059"
 msgid "Delete search and rating caches; settings are kept."
 msgstr "删除搜索与评分缓存，不影响设置。"
+
+msgctxt "#32060"
+msgid "Playlist completion"
+msgstr "播放列表补全"
+
+msgctxt "#32061"
+msgid "When a library episode starts, append the rest of the season to the queue. Only adds to the queue; current playback is untouched."
+msgstr "媒体库剧集起播时，把本季后续剧集加入队列；只加队列、不打断当前播放。"
+
+msgctxt "#32063"
+msgid "Library episodes: rest of season"
+msgstr "媒体库剧集：按季补全"
+
+msgctxt "#32064"
+msgid "Folder playback: rest of folder"
+msgstr "文件夹播放：按目录补全"
+
+msgctxt "#32065"
+msgid "When video or music starts from a folder, append the rest of the folder to the queue. Only adds to the queue; current playback is untouched."
+msgstr "视频或音乐从文件夹起播时，把同目录后续条目加入队列；只加队列、不打断当前播放。"

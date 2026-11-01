@@ -92,6 +92,10 @@ msgctxt "#32042"
 msgid "Douban rating"
 msgstr "Douban rating"
 
+msgctxt "#32043"
+msgid "Playback"
+msgstr "Playback"
+
 msgctxt "#32044"
 msgid "Logging & diagnostics"
 msgstr "Logging & diagnostics"
@@ -147,3 +151,23 @@ msgstr "Write MISTUARY.HELPER logs to kodi.log for troubleshooting."
 msgctxt "#32059"
 msgid "Delete search and rating caches; settings are kept."
 msgstr "Delete search and rating caches; settings are kept."
+
+msgctxt "#32060"
+msgid "Playlist completion"
+msgstr "Playlist completion"
+
+msgctxt "#32061"
+msgid "When a library episode starts, append the rest of the season to the queue. Only adds to the queue; current playback is untouched."
+msgstr "When a library episode starts, append the rest of the season to the queue. Only adds to the queue; current playback is untouched."
+
+msgctxt "#32063"
+msgid "Library episodes: rest of season"
+msgstr "Library episodes: rest of season"
+
+msgctxt "#32064"
+msgid "Folder playback: rest of folder"
+msgstr "Folder playback: rest of folder"
+
+msgctxt "#32065"
+msgid "When video or music starts from a folder, append the rest of the folder to the queue. Only adds to the queue; current playback is untouched."
+msgstr "When video or music starts from a folder, append the rest of the folder to the queue. Only adds to the queue; current playback is untouched."

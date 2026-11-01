@@ -38,6 +38,8 @@ DEFAULTS = {
     "emby_token_override": "",
     "cache_ttl": 300,
     "debug_log": False,
+    "playlist_completion_season": False,
+    "playlist_completion_folder": False,
 }
 
 
