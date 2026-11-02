@@ -37,9 +37,9 @@ HTTP 全部 mock，不依赖网络和 Emby。CI 每次 push 都跑。
 **未覆盖**：`http.py` / `kodi.py` / `log.py` / `i18n.py` 没有直接单测；
 `kodi.py` 的目录收尾通过 `test_default.py` 的 fake `xbmcplugin` 间接覆盖。
 
-> ⚠️ `test_emby.py` 的夹具用的是 `PrimaryImageTag`，而真实 Emby 搜索响应返回
-> `ImageTags: {Primary: ...}`。所以“搜索结果没有封面”这个 bug 没有被单测抓到；
-> 修复时要同步改夹具并加一条真实字段的用例。
+> 历史坑：`test_emby.py` 的夹具曾用 `PrimaryImageTag`，而真实 Emby 返回
+> `ImageTags: {Primary: ...}`，所以“搜索结果没有封面”没被单测抓到。夹具已改成真实形状，
+> 并保留一条只有 `ImageTags` 也能取到海报的用例。
 
 ## 2. 静态检查
 
@@ -59,20 +59,26 @@ from lib import config, emby, cache
 cache.get = lambda *a, **k: None      # 不落盘
 cache.put = lambda *a, **k: None
 s = config.load_servers("C:/Users/<你>/AppData/Roaming/Kodi/userdata")[0]
-print([i["name"] for i in emby.search(s, "RZD", "movies", limit=5, ttl=0)])
+items, title_count = emby.search_page(s, "RZD", "movies", limit=5, ttl=0)
+print([i["name"] for i in items])
 ```
 
 2026-10-30 实测结果：
 
 | 查询 | 结果 |
 |---|---|
-| `RZD` / movies | 让子弹飞、机器人总动员、燃烧女子的肖像（3 条，子串匹配） |
+| `RZD` / movies | 让子弹飞（1 条，2–4 位 ASCII 严格前缀） |
 | `让子弹飞` / movies | 1 条 |
 | `rangzidanfei` / movies | 1 条 |
 | `12th Fail` / movies | 1 条（原名） |
 | `Avatar` / movies | 1 条（大小写不敏感） |
 | `20之后` / shows | 1 条 |
-| `姜文` / `科幻` | 0 条（未实现，见 roadmap M1d） |
+| `姜文` / movies | 14 条（演员作品并入，0.3.3） |
+| `科幻` / movies | 29 条（类型作品并入，0.3.3） |
+| `JW` / movies | 2 条（标题首字母：精武门 / 精武英雄；不当人名） |
+
+> 演员 / 类型用 `search_page()` 才会并入；`search()` 只返回标题命中。
+> 注意皮肤键盘打不了中文，这两项在皮肤 UI 里实际不可达，只能用直连脚本验证。
 
 豆瓣实网验证（2026-10-30）：
 
@@ -100,13 +106,13 @@ print([i["name"] for i in emby.search(s, "RZD", "movies", limit=5, ttl=0)])
 
 前置：插件**已启用**（2026-10-30 复查 `enabled=1`）+ 重载皮肤 + 皮肤设置 → 媒体里能看到「使用 Emby 服务端搜索」。
 
-- [ ] `RZD`：出现 3 条，第一条是「让子弹飞」（服务端）；关掉开关后只剩 1 条（本地）
+- [ ] `RZD`：出现 1 条「让子弹飞」（服务端严格前缀）；关掉开关后同样是 1 条（本地）
 - [ ] `rangzidanfei` / `让子弹飞`：1 条
 - [ ] 剧集页签：`20之后` 有结果
 - [ ] 特殊字符：`Tom & Jerry` 不报错（库里没有该片，0 条也算通过）
 - [ ] 已看标记：看过的条目显示 OverlayWatched
 - [ ] 禁用或卸载插件并重载皮肤：开关消失，搜索结果回到本地
-- [ ] 演员名：当前应为 0 条（M1d 之前不验收这一项）
+- [ ] 演员 / 类型：皮肤键盘无法输入中文，当前 UI 里不可达；只用直连脚本验收
 - [ ] 播放进度：看了一半的条目显示进度
 - [ ] 分页：满一页后出现「加载更多」，点了能继续
 - [ ] **点一条结果能播**（这条是 M1c 的核心，播放地址没验过）
@@ -134,13 +140,11 @@ M3 明确暂缓，以下不验收。
 - [ ] 首页 / 搜索的剧集卡显示 4K / HDR / 音轨，与详情页一致
 - [ ] 没有分集的剧集：不显示，不报错
 
-### 3.6 已知未通过的实机项（2026-10-30）
+### 3.6 已解决的历史问题（2026-10-30）
 
-- [ ] **搜索列表没有封面**：Emby 返回 `ImageTags.Primary`，插件读 `PrimaryImageTag`，
-      `image_tag` 为空。修复方向见 `HANDOVER.md` §已知问题。
-- [ ] **搜索页背景没有兜底图**：非空查询且条目没有 fanart 时，皮肤侧
-      `NaraSearchBackground` 只剩纯黑层；这是皮肤问题，不是插件能补的。
-- [ ] **搜索结果点击播放**：`mode=play` 尚未实机验证。
+- ✅ **搜索列表没有封面**：`normalize()` 回退读 `ImageTags.Primary`（0.2.2 / `c4ac966`）。
+- ✅ **搜索页背景没有兜底图**：皮肤 1.5.x 改成渐变打底 + 剧照层。
+- ✅ **搜索结果点击播放**：`mode=play` 实机可直接播放，`play_url()` 不需要改。
 
 ## 4. 日志检查
 

@@ -30,7 +30,8 @@
 | 已看 / 播放进度 | ✅ | 写 `Overlay` / `percentplayed` |
 | 豆瓣评分 | ✅ | IMDb 优先，dbid 反查，标题 + 年份兜底；7 天缓存 |
 | action 模式 | ✅ 0.2.2 | `plugin://...?action=...` 会补 `endOfDirectory`；`RunScript` handle=-1 不调 |
-| 演员 / 导演 / 类型 / 别名 / 分词 | ❌ | M1d 暂缓 |
+| 演员 / 导演 / 类型 | ✅ 0.3.3 | 仅非 ASCII、≥2 字；纯字母按标题处理 |
+| 别名 / 分词 | ❌ | 未实现 |
 | 代表集技术标识 | ❌ | M3 明确不做，插件侧已移除空壳 |
 | 播放地址 | ✅ 实机通过 | `mode=play` 直连 Emby 插件，2026-10-30 验收；直链兜底不需要 |
 | 播放列表补全 | ✅ 0.3.4 | 两个独立开关：媒体库剧集按季补全 / 文件夹播放按目录补全（视频与音乐）；默认关，只加不播 |
@@ -64,7 +65,7 @@ Kodi 日志报 `CGUIMediaWindow::GetDirectory(...) failed`。
 **根因**：Emby `/Items?searchTerm=` 返回的是 `ImageTags.Primary`，
 **没有** `PrimaryImageTag` 字段；`normalize()` 只读后者 → `image_tag` 永远为空。
 
-**已做（`c4ac966`）**：
+**已做（`c4ac966`，0.2.2 已发布）**：
 
 - `normalize()` 先读 `PrimaryImageTag`，再回退 `ImageTags.Primary`
 - 新增 `backdrop_tag`（`BackdropImageTags[0]`，只存 tag 不存 URL）
@@ -80,11 +81,11 @@ Kodi 日志报 `CGUIMediaWindow::GetDirectory(...) failed`。
 ```
 
 同时把 `tests/test_emby.py` 的夹具改成真实响应形状（`ImageTags.Primary`），
-补一条“只有 ImageTags 也能取到海报”的用例。改完需要发 0.2.3。
+补一条“只有 ImageTags 也能取到海报”的用例（已随 0.2.2 发布）。
 
-### 4.2 搜索页背景没有兜底图
+### 4.2 搜索页背景没有兜底图（已解决，皮肤 1.5.x）
 
-这是**皮肤侧**问题，不是插件能补的。皮肤 `xml/Includes_Search.xml` 的
+这是**皮肤侧**问题，不是插件能补的；皮肤后来改成渐变打底 + 剧照层，已在 1.5.x 修复。皮肤 `xml/Includes_Search.xml` 的
 `NaraSearchBackground` 先画纯黑 `colors/black.png`，再画 `16590` fanart；`16590` 的
 `visible` 要求 `!String.IsEmpty(...Art(fanart))`。非空查询且条目没有 fanart 时，
 两层都不显示，只剩纯黑。
@@ -103,7 +104,8 @@ Kodi 日志报 `CGUIMediaWindow::GetDirectory(...) failed`。
 
 ### 4.4 其他
 
-- M1d 演员 / 导演 / 类型 / 别名 / 分词未实现，暂缓。
+- M1d 演员 / 导演 / 类型已完成（仅非 ASCII、≥2 字）；别名 / 分词仍未实现。
+- **皮肤键盘只能输入字母**，演员 / 类型在皮肤 UI 里实际不可达，需要中文输入或人物页签。
 - M3 代表集技术标识明确不做。
 - 多服务器切换未实机验过；Kodi 19/20 未验。
 - 皮肤目前不做版本比较，旧版插件不写新属性，等价于没装。

@@ -122,7 +122,7 @@ ServerRemoved    bool，换过服务器后旧配置只置这个标记、不删�
 - **搜索封面**：`normalize()` 只读 `raw["PrimaryImageTag"]`，而 Emby 实际返回
   `raw["ImageTags"]["Primary"]`，所以搜索结果 `image_tag` 为空、列表没有海报。
   这是 0.2.2 之后仍待修的问题，测试夹具也用了旧字段，未覆盖真实响应。
-- **播放地址**：`play_url()` 走 Emby 插件 `mode=play`，尚未实机验证。
+- **播放地址**：`play_url()` 走 Emby 插件 `mode=play`，2026-10-30 实机验证可直接播放；直链兜底不启用。
 
 ## 日志
 
