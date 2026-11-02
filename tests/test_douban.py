@@ -155,6 +155,23 @@ class RunActionTest(unittest.TestCase):
             douban.run_action(Req(imdb="tt1340507"))
         self.assertEqual(self.written[douban.PROP_STATUS], "missing")
 
+    def test_emby_without_rating_falls_back_to_public(self):
+        settings = {"douban_enabled": True, "douban_prefer_emby": True,
+                    "douban_fallback_public": True}
+        with mock.patch.object(douban, "resolve_imdb", return_value="tt1533117"),              mock.patch.object(douban.config, "read_settings", return_value=settings),              mock.patch.object(douban, "_emby_lookup", return_value={"rating": None}),              mock.patch.object(douban, "fetch", return_value=(8.6, 10)) as fetch:
+            douban.run_action(Req(imdb="tt1533117"))
+        fetch.assert_called_once()
+        self.assertEqual(self.written[douban.PROP_STATUS], "ok")
+        self.assertEqual(self.written[douban.PROP_RATING], "8.6")
+
+    def test_emby_without_rating_can_skip_public_fallback(self):
+        settings = {"douban_enabled": True, "douban_prefer_emby": True,
+                    "douban_fallback_public": False}
+        with mock.patch.object(douban, "resolve_imdb", return_value="tt1533117"),              mock.patch.object(douban.config, "read_settings", return_value=settings),              mock.patch.object(douban, "_emby_lookup", return_value={"rating": None}),              mock.patch.object(douban, "fetch") as fetch:
+            douban.run_action(Req(imdb="tt1533117"))
+        fetch.assert_not_called()
+        self.assertEqual(self.written[douban.PROP_STATUS], "missing")
+
     def test_title_fallback_when_no_imdb(self):
         with mock.patch.object(douban, "resolve_imdb", return_value=""),              mock.patch.object(douban.kodi, "get_home_property",
                                side_effect=lambda k: "让子弹飞" if k == douban.PROP_QUERY else "2010"),              mock.patch.object(douban, "_frodo_by_title", return_value=(9.0, 10)) as by_title:

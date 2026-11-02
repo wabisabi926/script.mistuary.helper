@@ -252,16 +252,19 @@ def run_action(req) -> None:
         if hit is not None:
             rating = hit.get("rating")
             if rating is None:
-                _write("missing")
-                log.debug("douban: emby knows %s but has no rating" % imdb_id)
+                if not settings.get("douban_fallback_public", True):
+                    _write("missing")
+                    log.debug("douban: emby knows %s but has no rating (fallback off)" % imdb_id)
+                    return
+                log.debug("douban: emby knows %s but has no rating, fallback to public" % imdb_id)
+            else:
+                try:
+                    text = "%.1f" % float(rating)
+                except (TypeError, ValueError):
+                    text = str(rating)
+                _write("ok", text, str(int(hit.get("votes") or 0)), str(int(time.time())), "emby")
+                log.debug("douban via emby: %s -> %s" % (imdb_id, text))
                 return
-            try:
-                text = "%.1f" % float(rating)
-            except (TypeError, ValueError):
-                text = str(rating)
-            _write("ok", text, str(int(hit.get("votes") or 0)), str(int(time.time())), "emby")
-            log.debug("douban via emby: %s -> %s" % (imdb_id, text))
-            return
 
     key = cache.make_key("douban", imdb_id) if imdb_id else cache.make_key("douban_title", title, year)
     cached = cache.get(key, DOUBAN_TTL)

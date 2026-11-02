@@ -67,6 +67,18 @@ def main():
         kodi.end_directory(HANDLE)
         return
 
+    if req.action == "settings_snapshot":
+        from lib import skin_bridge
+
+        skin_bridge.snapshot()
+        return
+
+    if req.action == "toggle_setting":
+        from lib import skin_bridge
+
+        skin_bridge.toggle(req.key)
+        return
+
     if req.action == "clear_cache":
         from lib import cache
 

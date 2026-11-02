@@ -182,6 +182,26 @@ Kodi 的 `<include condition="...">` 和容器的 `<content>` 都是**加载时�
 
 卸载后回退则是**立即**的——探测是每次渲染求值，不是缓存。
 
+## 八点五、皮肤助手页的设置桥（0.3.5）
+
+皮肤的「皮肤助手」页不能可靠地直接读写别的 addon，因此由插件把主要开关写成
+`Window(home)` 属性；皮肤只读属性、点击时回调：
+
+```
+RunScript(script.mistuary.helper,action=settings_snapshot)
+RunScript(script.mistuary.helper,action=toggle_setting,key=douban_enabled)
+```
+
+| 属性 | 对应设置 |
+|---|---|
+| `Mistuary.Helper.DoubanEnabled` | `douban_enabled` |
+| `Mistuary.Helper.PlaylistSeason` | `playlist_completion_season` |
+| `Mistuary.Helper.PlaylistFolder` | `playlist_completion_folder` |
+| `Mistuary.Helper.PlaylistNextSeason` | `playlist_completion_next_season` |
+
+属性值为 `"true"` / `"false"`；`toggle_setting` 只接受上表四个 key，未知 key 忽略。
+插件未启用时不写属性，皮肤对应行隐藏。
+
 ## 九、插件不做什么
 
 - 不写 Kodi 媒体库

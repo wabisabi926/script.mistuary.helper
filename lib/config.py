@@ -33,6 +33,7 @@ DEFAULTS = {
     "server_id": "",
     "page_size": 100,
     "douban_enabled": True,
+    "douban_fallback_public": True,
     "douban_prefer_emby": True,
     "emby_url_override": "",
     "emby_token_override": "",
@@ -40,6 +41,7 @@ DEFAULTS = {
     "debug_log": False,
     "playlist_completion_season": False,
     "playlist_completion_folder": False,
+    "playlist_completion_next_season": False,
 }
 
 
@@ -160,6 +162,8 @@ def read_settings() -> dict:
         except (TypeError, ValueError):
             pass
         values["douban_enabled"] = bool(addon.getSettingBool("douban_enabled"))
+        values["douban_fallback_public"] = bool(addon.getSettingBool("douban_fallback_public"))
+        values["playlist_completion_next_season"] = bool(addon.getSettingBool("playlist_completion_next_season"))
         values["douban_prefer_emby"] = bool(addon.getSettingBool("douban_prefer_emby"))
         values["emby_url_override"] = (addon.getSettingString("emby_url_override") or "").strip()
         values["emby_token_override"] = (addon.getSettingString("emby_token_override") or "").strip()

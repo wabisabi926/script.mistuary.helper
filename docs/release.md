@@ -10,7 +10,7 @@
 ## 2. 发版前自检
 
 ```bash
-python -m unittest discover -s tests -p 'test_*.py'   # 当前 132 项
+python -m unittest discover -s tests -p 'test_*.py'   # 当前 146 项
 python -m compileall -q default.py lib
 ```
 
@@ -73,5 +73,6 @@ git ls-remote --tags origin | tail -5
 | 0.2.2 | 修复 action 模式 `GetDirectory failed` |
 | 0.3.2 | CI / 无 Kodi 环境单测修复 |
 | 0.3.4 | 播放列表补全（含 0.3.3 的设置整理与搜索补齐） |
+| 0.3.5 | 播放列表自然排序/去重/跳过花絮；豆瓣无分可回退公开接口 |
 
-`0.3.4` 已发布，Release 由 CI 在 push 时自动创建；后续改动升 patch 再发。
+`0.3.5` 待发布，Release 由 CI 在 push 时自动创建；后续改动升 patch 再发。

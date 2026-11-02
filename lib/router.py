@@ -22,10 +22,10 @@ class Request(object):
     """一次调用的意图。字段少而明确，避免用 dict 到处传。"""
 
     __slots__ = ("mode", "action", "type", "query", "dbid", "imdb", "tmdb",
-                 "title", "year", "offset", "raw")
+                 "title", "year", "key", "offset", "raw")
 
     def __init__(self, mode="", action="", type="", query="", dbid="", imdb="",
-                 tmdb="", title="", year="", offset=0, raw=""):
+                 tmdb="", title="", year="", key="", offset=0, raw=""):
         self.mode = mode
         self.action = action
         self.type = type
@@ -35,6 +35,7 @@ class Request(object):
         self.tmdb = tmdb
         self.title = title
         self.year = year
+        self.key = key
         self.offset = offset
         self.raw = raw
 
@@ -115,6 +116,7 @@ def parse(raw: str) -> Request:
         tmdb=one("tmdb"),
         title=one("title"),
         year=one("year"),
+        key=one("key"),
         offset=max(0, offset),
         raw=raw,
     )

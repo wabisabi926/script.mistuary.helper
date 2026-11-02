@@ -51,6 +51,86 @@ class FollowingFilesTest(unittest.TestCase):
             ["/m/b.flac"],
         )
 
+    def test_natural_order(self):
+        files = ["/m/E10.mkv", "/m/E2.mkv", "/m/E1.mkv"]
+        self.assertEqual(
+            playlist_sync.following_files(files, "/m/E1.mkv"),
+            ["/m/E2.mkv", "/m/E10.mkv"],
+        )
+
+    def test_skips_trailers_samples_and_extras(self):
+        files = [
+            "/m/Movie.mkv",
+            "/m/Movie-trailer.mkv",
+            "/m/sample.mkv",
+            "/m/Behind the Scenes.mkv",
+            "/m/Movie.part2.mkv",
+        ]
+        self.assertEqual(
+            playlist_sync.following_files(files, "/m/Movie.mkv"),
+            ["/m/Movie.part2.mkv"],
+        )
+
+    def test_duplicate_paths_are_kept_once(self):
+        files = ["/m/a.mkv", "/m/B.mkv", "/m/b.mkv", "/m/C.mkv"]
+        self.assertEqual(
+            playlist_sync.following_files(files, "/m/a.mkv"),
+            ["/m/B.mkv", "/m/C.mkv"],
+        )
+
+    def test_audio_folder_does_not_filter_sample_word(self):
+        files = ["/m/01.mp3", "/m/02 sample.mp3"]
+        self.assertEqual(
+            playlist_sync.following_files(files, "/m/01.mp3", "audio"),
+            ["/m/02 sample.mp3"],
+        )
+
+
+class AddEpisodesTest(unittest.TestCase):
+    def test_dedupes_episode_ids_files_and_current_file(self):
+        calls = []
+        old = playlist_sync._rpc
+        playlist_sync._rpc = lambda method, params: (calls.append(params["item"]) or "OK")
+        try:
+            episodes = [
+                {"episodeid": 2, "file": "/tv/e02.mkv"},
+                {"episodeid": 2, "file": "/tv/e02.mkv"},
+                {"episodeid": 3, "file": "/tv/e02.mkv"},
+                {"episodeid": 4, "file": "/tv/e01.mkv"},
+                {"episodeid": 5, "file": "/tv/e05.mkv"},
+            ]
+            added = playlist_sync._add_episodes(0, episodes, "/tv/e01.mkv")
+        finally:
+            playlist_sync._rpc = old
+        self.assertEqual(added, 2)
+        self.assertEqual(calls, [{"episodeid": 2}, {"episodeid": 5}])
+
+
+class NextSeasonTest(unittest.TestCase):
+    def test_first_episode_of_next_season(self):
+        old_details, old_eps = playlist_sync.episode_details, playlist_sync.season_episodes
+        playlist_sync.episode_details = lambda eid: {"tvshowid": 7, "season": 1}
+        playlist_sync.season_episodes = lambda tvshowid, season: [
+            {"episodeid": 11, "episode": 3}, {"episodeid": 9, "episode": 1},
+        ]
+        try:
+            item = {"type": "episode", "id": 5, "season": 1, "episode": 10, "file": "/tv/e10.mkv"}
+            picked = playlist_sync.next_season_targets(item)
+        finally:
+            playlist_sync.episode_details, playlist_sync.season_episodes = old_details, old_eps
+        self.assertEqual([e["episodeid"] for e in picked], [9])
+
+    def test_no_next_season_returns_empty(self):
+        old_details, old_eps = playlist_sync.episode_details, playlist_sync.season_episodes
+        playlist_sync.episode_details = lambda eid: {"tvshowid": 7, "season": 1}
+        playlist_sync.season_episodes = lambda tvshowid, season: []
+        try:
+            picked = playlist_sync.next_season_targets(
+                {"type": "episode", "id": 5, "season": 1, "episode": 10})
+        finally:
+            playlist_sync.episode_details, playlist_sync.season_episodes = old_details, old_eps
+        self.assertEqual(picked, [])
+
 
 class ShouldExtendTest(unittest.TestCase):
     def test_only_single_item_and_any_switch(self):
@@ -184,6 +264,41 @@ class ExtendPlaylistTest(unittest.TestCase):
             "Playlist.Add",
             {"playlistid": 0, "item": {"file": "dav://nas/music/02.m4a"}},
         )])
+
+    def test_last_episode_adds_next_season_first(self):
+        calls = []
+        self._patch(
+            player_context=lambda: (1, 1, "video"),
+            playlist_length=lambda playlistid: 1,
+            current_item=lambda playerid: {
+                "id": 5, "type": "episode", "season": 1, "episode": 10, "file": "/tv/e10.mkv",
+            },
+            season_targets=lambda item: [],
+            next_season_targets=lambda item: [{"episodeid": 9, "file": "/tv/s02e01.mkv"}],
+            folder_files=lambda folder: (_ for _ in ()).throw(AssertionError("no folder fallback")),
+            _rpc=lambda method, params: (calls.append((method, params)) or "OK"),
+            log=_Log(),
+        )
+        added = playlist_sync.extend_playlist(True, False, True)
+        self.assertEqual(added, 1)
+        self.assertEqual(calls, [(
+            "Playlist.Add",
+            {"playlistid": 1, "item": {"episodeid": 9}},
+        )])
+
+    def test_last_episode_does_not_add_next_season_when_disabled(self):
+        self._patch(
+            player_context=lambda: (1, 1, "video"),
+            playlist_length=lambda playlistid: 1,
+            current_item=lambda playerid: {
+                "id": 5, "type": "episode", "season": 1, "episode": 10, "file": "/tv/e10.mkv",
+            },
+            season_targets=lambda item: [],
+            next_season_targets=lambda item: (_ for _ in ()).throw(AssertionError("must not run")),
+            _rpc=lambda method, params: "OK",
+            log=_Log(),
+        )
+        self.assertEqual(playlist_sync.extend_playlist(True, False), 0)
 
     def test_episode_prefers_season_over_folder(self):
         calls = []

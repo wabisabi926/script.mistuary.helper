@@ -3,7 +3,7 @@
 > 目标：**没有 Kodi、没有 Emby、没有网络**也能验证大部分逻辑。
 > 剩下那部分（播放地址、搜索结果正确性）只能实机验，列在 §3。
 
-## 1. 单测（`tests/`，132 项）
+## 1. 单测（`tests/`，146 项）
 
 ```bash
 python -m unittest discover -s tests -p 'test_*.py'

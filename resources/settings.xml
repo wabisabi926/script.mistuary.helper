@@ -69,6 +69,11 @@
                     <default>false</default>
                     <control type="toggle"/>
                 </setting>
+                <setting id="playlist_completion_next_season" type="boolean" label="32068" help="32069">
+                    <level>0</level>
+                    <default>false</default>
+                    <control type="toggle"/>
+                </setting>
                 <setting id="playlist_completion_folder" type="boolean" label="32064" help="32065">
                     <level>0</level>
                     <default>false</default>
@@ -85,6 +90,11 @@
                     <control type="toggle"/>
                 </setting>
                 <setting id="douban_prefer_emby" type="boolean" label="32032" help="32057">
+                    <level>0</level>
+                    <default>true</default>
+                    <control type="toggle"/>
+                </setting>
+                <setting id="douban_fallback_public" type="boolean" label="32066" help="32067">
                     <level>0</level>
                     <default>true</default>
                     <control type="toggle"/>

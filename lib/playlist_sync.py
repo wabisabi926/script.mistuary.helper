@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 from lib import log
 
@@ -27,6 +28,29 @@ NON_MEDIA_EXT = {
 
 def _norm(path) -> str:
     return (path or "").strip().replace("\\", "/").rstrip("/")
+
+
+_NUMBER_RE = re.compile(r"(\d+)")
+# 只匹配独立词：Movie-trailer.mkv / "Sample" / extras/…；避免误伤片名里含这些词的正常文件
+_EXTRA_RE = re.compile(
+    r"(^|[ ._\-\[(])(sample|trailer|extras?|featurette|"
+    r"behind[ ._-]?the[ ._-]?scenes|deleted[ ._-]?scenes)([ ._\-\])]|$)",
+    re.IGNORECASE,
+)
+
+
+def _natural_key(path):
+    """按文件名里的数字自然排序：E2 在 E10 前面。"""
+    name = _norm(path).rsplit("/", 1)[-1].casefold()
+    return [int(part) if part.isdigit() else part for part in _NUMBER_RE.split(name)]
+
+
+def _is_extra(path) -> bool:
+    """预告 / 花絮 / sample 这类同目录附属文件。"""
+    name = _norm(path).rsplit("/", 1)[-1]
+    if "." in name:
+        name = name.rsplit(".", 1)[0]
+    return bool(_EXTRA_RE.search(name))
 
 
 def _ext(path) -> str:
@@ -82,9 +106,26 @@ def following_episodes(episodes, current_episode):
 
 
 def following_files(files, current_file, media_type="video"):
-    """按目录顺序返回当前文件之后的同类媒体文件。当前文件不在列表里时返回空。"""
+    """按自然顺序返回当前文件之后的同类媒体文件。
+
+    - 视频文件夹会跳过 sample / 预告 / 花絮；
+    - 同一路径（大小写不同也算）只保留一次；
+    - 当前文件不在列表里时返回空。
+    """
     check = looks_like_audio if media_type == "audio" else looks_like_video
-    clean = [f for f in (files or []) if check(f)]
+    clean = []
+    seen = set()
+    for f in (files or []):
+        if not check(f):
+            continue
+        if media_type != "audio" and _is_extra(f):
+            continue
+        key = _norm(f).casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        clean.append(f)
+    clean.sort(key=_natural_key)
     for idx, path in enumerate(clean):
         if same_file(path, current_file):
             return clean[idx + 1:]
@@ -222,8 +263,8 @@ def folder_files(folderpath):
     return [i.get("file") for i in items if i.get("filetype") == "file" and i.get("file")]
 
 
-def season_targets(item):
-    """返回同季后续剧集；不是剧集或缺季/集号时返回 None（交给同文件夹）。"""
+def episode_context(item):
+    """返回 (tvshowid, season, episode)；不是剧集或信息不全时返回 None。"""
     item = item or {}
     if not is_episode(item):
         return None
@@ -239,21 +280,56 @@ def season_targets(item):
             episode = _as_int(details.get("episode"))
     if not tvshowid or season is None or season < 0 or not episode:
         return None
+    return tvshowid, season, episode
+
+
+def season_targets(item):
+    """返回同季后续剧集；不是剧集或缺季/集号时返回 None（交给同文件夹）。"""
+    context = episode_context(item)
+    if context is None:
+        return None
+    tvshowid, season, episode = context
     return following_episodes(season_episodes(tvshowid, season), episode)
 
 
-def _add_episodes(playlistid, episodes) -> int:
+def next_season_targets(item):
+    """返回下一季第一集（只一条）；没有下一季时返回空列表。
+
+    只补第一集，不一次塞整季：这一集起播后队列只剩它，按季补全会接着补完下一季。
+    """
+    context = episode_context(item)
+    if context is None:
+        return []
+    tvshowid, season, _episode = context
+    episodes = season_episodes(tvshowid, season + 1)
+    episodes = sorted(episodes, key=lambda e: int(e.get("episode") or 0))
+    return episodes[:1]
+
+
+def _add_episodes(playlistid, episodes, current_file="") -> int:
     added = 0
+    seen_ids = set()
+    seen_files = set()
+    current_key = _norm(current_file).casefold()
+    if current_key:
+        seen_files.add(current_key)
     for ep in episodes:
         episodeid = ep.get("episodeid")
-        if not episodeid:
+        if not episodeid or episodeid in seen_ids:
+            continue
+        file_key = _norm(ep.get("file")).casefold()
+        if file_key and file_key in seen_files:
             continue
         if _rpc("Playlist.Add", {"playlistid": int(playlistid), "item": {"episodeid": int(episodeid)}}):
             added += 1
+            seen_ids.add(episodeid)
+            if file_key:
+                seen_files.add(file_key)
     return added
 
 
-def extend_playlist(season_enabled=False, folder_enabled=False) -> int:
+def extend_playlist(season_enabled=False, folder_enabled=False,
+                    next_season_enabled=False) -> int:
     """返回实际加入队列的条数；任何异常/不满足条件都返回 0。"""
     context = player_context()
     if not context:
@@ -272,9 +348,18 @@ def extend_playlist(season_enabled=False, folder_enabled=False) -> int:
     if mode == "season":
         picked = season_targets(item)
         if picked is not None:
-            added = _add_episodes(playlistid, picked)
-            log.debug("season completion: +%d" % added)
-            return added
+            if picked:
+                added = _add_episodes(playlistid, picked, item.get("file"))
+                log.debug("season completion: +%d" % added)
+                return added
+            # 本季最后一集：跨季开关打开时只补下一季第一集
+            if next_season_enabled:
+                nxt = next_season_targets(item)
+                if nxt:
+                    added = _add_episodes(playlistid, nxt, item.get("file"))
+                    log.debug("next season completion: +%d" % added)
+                    return added
+            return 0
         if not folder_enabled:
             return 0
 
