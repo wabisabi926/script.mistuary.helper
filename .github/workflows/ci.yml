@@ -27,7 +27,7 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Compile check
         # 语法错误在 Kodi 里只表现为"插件打不开"，这里提前拦住
-        run: python -m compileall -q default.py lib
+        run: python -m compileall -q default.py service.py lib
 
   build:
     needs: test
@@ -88,8 +88,8 @@ jobs:
           set -euo pipefail
           NAME="script.mistuary.helper-${{ steps.meta.outputs.version }}"
           mkdir -p "build/${NAME}"
-          # 只带运行时需要的：入口、lib、resources、元数据
-          cp addon.xml default.py changelog.txt LICENSE README.md "build/${NAME}/"
+          # 只带运行时需要的：入口、服务、lib、resources、元数据
+          cp addon.xml default.py service.py changelog.txt LICENSE README.md "build/${NAME}/"
           cp -r lib resources "build/${NAME}/"
           find "build/${NAME}" -name '__pycache__' -type d -prune -exec rm -rf {} +
           find "build/${NAME}" -name '*.pyc' -delete
