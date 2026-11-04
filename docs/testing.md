@@ -3,7 +3,7 @@
 > 目标：**没有 Kodi、没有 Emby、没有网络**也能验证大部分逻辑。
 > 剩下那部分（播放地址、搜索结果正确性）只能实机验，列在 §3。
 
-## 1. 单测（`tests/`，146 项）
+## 1. 单测（`tests/`，174 项）
 
 ```bash
 python -m unittest discover -s tests -p 'test_*.py'
@@ -19,6 +19,7 @@ HTTP 全部 mock，不依赖网络和 Emby。CI 每次 push 都跑。
 | `test_config.py` | 服务器发现、地址优先级、`ServerRemoved` 跳过、缺 token、坏 JSON、按 id 选、未知 id 回退、repr 不泄露 token | 13 |
 | `test_emby.py` | 字段映射、`Series` 是文件夹、缺字段不崩、结果不含 token、图片 URL、搜索参数、缓存命中不打 HTTP、空结果缓存、401 / 超时 / 未知类型 / 坏 JSON 的错误映射 | 19 |
 | `test_default.py` | action 入口：`plugin://` 有 handle 必须 `endOfDirectory`；`RunScript` handle=-1 不调 | 2 |
+| `test_file_resume.py` | 路径归一化、`.strm` 识别、起播/结束阈值、账本 upsert/get/delete、大小写回退、TTL/上限清理 | 26 |
 
 ### 几条值得单独说的用例
 

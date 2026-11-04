@@ -187,3 +187,39 @@ msgstr "Episodes: continue to next season"
 msgctxt "#32069"
 msgid "When the last episode of a season starts, queue the first episode of the next season. Works with 'rest of season'."
 msgstr "When the last episode of a season starts, queue the first episode of the next season. Works with 'rest of season'."
+
+msgctxt "#32070"
+msgid "File playback resume"
+msgstr "File playback resume"
+
+msgctxt "#32071"
+msgid "Remember the playback position of videos opened from the file manager and continue from it next time."
+msgstr "Remember the playback position of videos opened from the file manager and continue from it next time."
+
+msgctxt "#32072"
+msgid "Playback record"
+msgstr "Playback record"
+
+msgctxt "#32073"
+msgid "Continue from {0}?"
+msgstr "Continue from {0}?"
+
+msgctxt "#32075"
+msgid "Play from start"
+msgstr "Play from start"
+
+msgctxt "#32082"
+msgid "Continue from {0}"
+msgstr "Continue from {0}"
+
+msgctxt "#32076"
+msgid "File playback resume"
+msgstr "File playback resume"
+
+msgctxt "#32074"
+msgid "Continue"
+msgstr "Continue"
+
+msgctxt "#32078"
+msgid "Cancel"
+msgstr "Cancel"

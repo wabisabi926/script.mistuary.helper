@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""播放列表补全服务。
+"""播放服务：播放列表补全 + 文件播放记录。
 
-Kodi 只在插件启用时加载它；两个补全开关都关闭（默认）时，
-onAVStarted 直接返回，行为与没装插件完全一致。
+两个功能都从设置读取开关；关闭时对应回调立即返回，行为与没装插件一致。
+文件播放记录默认开启，数据存在 ``addon_data/script.mistuary.helper/resume.db``。
 """
 
 import os
@@ -10,37 +10,86 @@ import sys
 
 import xbmc
 import xbmcaddon
+import xbmcvfs
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import log, playlist_sync
+from lib import file_resume, log, playlist_sync
 
 
-class PlaylistFiller(xbmc.Player):
+class HelperPlayer(xbmc.Player):
+    def __init__(self, resume):
+        super().__init__()
+        self._resume = resume
+
     def onAVStarted(self):
+        # 续播弹窗优先：播放列表补全可能耗时数秒（大目录/网络），
+        # 不能挡在弹窗前面。用户选完（或取消）再补列表。
         try:
-            if not (self.isPlayingVideo() or self.isPlayingAudio()):
-                return
-            addon = xbmcaddon.Addon()
-            season = addon.getSettingBool("playlist_completion_season")
-            folder = addon.getSettingBool("playlist_completion_folder")
-            next_season = addon.getSettingBool("playlist_completion_next_season")
-            if not (season or folder):
-                return
-            playlist_sync.extend_playlist(season, folder, next_season)
+            self._resume.on_av_started()
+        except Exception as exc:  # noqa: BLE001
+            log.error("file resume start failed: %s" % exc)
+
+        try:
+            if self.isPlayingVideo() or self.isPlayingAudio():
+                addon = xbmcaddon.Addon()
+                season = addon.getSettingBool("playlist_completion_season")
+                folder = addon.getSettingBool("playlist_completion_folder")
+                next_season = addon.getSettingBool("playlist_completion_next_season")
+                if season or folder:
+                    playlist_sync.extend_playlist(season, folder, next_season)
         except Exception as exc:  # noqa: BLE001 - 服务不能因异常退出
             log.error("playlist completion failed: %s" % exc)
 
+    def onPlayBackPaused(self):
+        try:
+            self._resume.on_paused()
+        except Exception as exc:  # noqa: BLE001
+            log.error("file resume pause failed: %s" % exc)
+
+    def onPlayBackSeek(self, time, seekOffset):
+        try:
+            self._resume.on_seek()
+        except Exception as exc:  # noqa: BLE001
+            log.error("file resume seek failed: %s" % exc)
+
+    def onPlayBackStopped(self):
+        try:
+            self._resume.on_stopped()
+        except Exception as exc:  # noqa: BLE001
+            log.error("file resume stop failed: %s" % exc)
+
+    def onPlayBackEnded(self):
+        try:
+            self._resume.on_ended()
+        except Exception as exc:  # noqa: BLE001
+            log.error("file resume end failed: %s" % exc)
+
 
 class HelperService(xbmc.Monitor):
-    pass
+    def __init__(self, resume):
+        super().__init__()
+        self._resume = resume
+
+    def onCleanFinished(self, library=""):
+        try:
+            self._resume.on_clean_finished(library)
+        except Exception as exc:  # noqa: BLE001
+            log.error("file resume clean hook failed: %s" % exc)
 
 
 if __name__ == "__main__":
     log.info("service started")
-    player = PlaylistFiller()
-    monitor = HelperService()
+    profile = xbmcvfs.translatePath(
+        "special://profile/addon_data/script.mistuary.helper"
+    )
+    store = file_resume.ResumeStore(os.path.join(profile, "resume.db"))
+    resume = file_resume.FileResumeManager(store)
+    resume.start()
+    player = HelperPlayer(resume)
+    monitor = HelperService(resume)
     try:
         monitor.waitForAbort()
     finally:
         del player
+        resume.stop()

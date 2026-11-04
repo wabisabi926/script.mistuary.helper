@@ -94,7 +94,7 @@ msgstr "豆瓣评分"
 
 msgctxt "#32043"
 msgid "Playback"
-msgstr "播放列表"
+msgstr "播放"
 
 msgctxt "#32044"
 msgid "Logging & diagnostics"
@@ -187,3 +187,39 @@ msgstr "剧集：跨季继续"
 msgctxt "#32069"
 msgid "When the last episode of a season starts, queue the first episode of the next season. Works with 'rest of season'."
 msgstr "本季最后一集起播时，把下一季第一集加入队列；配合“按季补全”使用。"
+
+msgctxt "#32070"
+msgid "File playback resume"
+msgstr "文件播放记录"
+
+msgctxt "#32071"
+msgid "Remember the playback position of videos opened from the file manager and continue from it next time."
+msgstr "记录从文件管理器打开的视频进度，下次可从断点继续。"
+
+msgctxt "#32072"
+msgid "Playback record"
+msgstr "播放记录"
+
+msgctxt "#32073"
+msgid "Continue from {0}?"
+msgstr "从 {0} 继续播放？"
+
+msgctxt "#32075"
+msgid "Play from start"
+msgstr "从头播放"
+
+msgctxt "#32082"
+msgid "Continue from {0}"
+msgstr "从 {0} 继续播放"
+
+msgctxt "#32076"
+msgid "File playback resume"
+msgstr "文件播放记录"
+
+msgctxt "#32074"
+msgid "Continue"
+msgstr "继续播放"
+
+msgctxt "#32078"
+msgid "Cancel"
+msgstr "取消"

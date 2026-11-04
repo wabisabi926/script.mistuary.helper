@@ -13,6 +13,7 @@
 script.mistuary.helper/
 ├── addon.xml                  元数据；provides=video（搜索结果要作为视频目录）
 ├── default.py                 入口：解析 argv → 分发 → endOfDirectory
+├── service.py                 播放服务：播放列表补全 + 文件播放记录
 ├── lib/
 │   ├── router.py              参数解析（query 必须是最后一个参数）
 │   ├── config.py              读设置 + 发现 Emby 服务器
@@ -23,10 +24,12 @@ script.mistuary.helper/
 │   ├── emby.py                Emby 客户端 + 结果映射 + 渲染
 │   ├── kodi.py                ListItem 构造、窗口属性桥
 │   ├── douban.py              M2：豆瓣取分
+│   ├── playlist_sync.py       播放列表补全（事件驱动）
+│   └── file_resume.py         文件播放记录：SQLite 账本 + Kodi 续播点镜像
 ├── resources/
 │   ├── settings.xml
 │   └── language/{en_gb,zh_cn}/strings.po
-└── tests/                     7 个文件，146 项
+└── tests/                     8 个文件，174 项
 ```
 
 ## 数据流
@@ -47,6 +50,15 @@ default.py ── router.parse() ──> Request(mode, type, query, offset…)
    │
    ├─ action=rating ──> douban.run_action()       （M2）
    └─ action=clear_cache ─> cache.clear()
+
+service.py（常驻）
+   ├─ onAVStarted ──> playlist_sync.extend_playlist()      补队列
+   └─ onAVStarted / pause / seek / stop / ended
+          └─> file_resume.FileResumeManager
+                 ├─ resume.db（SQLite WAL）              账本
+                 ├─ Files.SetFileDetails（JSON-RPC）      Kodi 原生镜像
+                 ├─ 10003 弹窗（继续 / 从头）
+                 └─ Window(home) 属性（10003 焦点行圆环）
 ```
 
 ## 三条设计原则
@@ -78,6 +90,11 @@ default.py ── router.parse() ──> Request(mode, type, query, offset…)
 0.3.4 起新增事件驱动的 `service.py`，只做**播放列表补全**：不轮询、不缓存，
 两个开关默认关；都关时 `onAVStarted` 立即返回，等同于没有这个服务。
 
+0.3.7（本地未发）在同一个 service 里加**文件播放记录**：`resume.db` 是自己的
+SQLite 账本（WAL），高频写只落这里；Kodi 的 `MyVideos.db` 只在暂停/拖动/停止和
+每 5 分钟通过 JSON-RPC 写一次，从不直接打开。唯一的轮询是 10003 文件管理器的
+焦点行圆环（0.2 秒一次，只在窗口激活时跑，只查内存字典）。
+
 ## 为什么某些模块不 import xbmc
 
 `router` / `http` / `cache` 完全不碰 Kodi；`config` / `log` / `i18n` 把 import 放在函数内部。
@@ -94,6 +111,8 @@ default.py ── router.parse() ──> Request(mode, type, query, offset…)
 | `provides=video` | 没有它，`plugin://` 路径仍能打开，但 content type 未知，皮肤 `Container.Content(movies)` 判断会失效 |
 | 缓存 key 用 `sha1` 文件名 | key 里有中文和 `|`，直接当文件名在某些文件系统上出问题 |
 | 空结果也缓存 | 用户连续打字时不必每次都打服务端；TTL 只有 5 分钟 |
+| 文件播放记录用自有 SQLite 账本 | 不直接写 `MyVideos.db`、不依赖它的表结构；清理媒体库后还能从账本恢复；高频写留在 WAL 小库 |
+| Kodi 续播点只走 JSON-RPC | 让 Kodi 自己加锁/开事务；helper 不承担数据库锁风险 |
 | 失败**不**缓存 | 一次网络抖动会锁死 5 分钟 |
 | 缓存写失败静默 | 缓存是优化不是功能，写不进去也要能正常返回结果 |
 | 过滤 Kodi 的 `resume:*` argv | Kodi 21+ 目录调用会额外传 `resume:false`；不丢弃会污染搜索词（0.2.1） |

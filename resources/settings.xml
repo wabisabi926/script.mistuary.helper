@@ -80,6 +80,13 @@
                     <control type="toggle"/>
                 </setting>
             </group>
+            <group id="2" label="32076">
+                <setting id="file_resume" type="boolean" label="32070" help="32071">
+                    <level>0</level>
+                    <default>true</default>
+                    <control type="toggle"/>
+                </setting>
+            </group>
         </category>
 
         <category id="douban" label="32042" help="">

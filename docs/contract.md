@@ -182,7 +182,7 @@ Kodi 的 `<include condition="...">` 和容器的 `<content>` 都是**加载时�
 
 卸载后回退则是**立即**的——探测是每次渲染求值，不是缓存。
 
-## 八点五、皮肤助手页的设置桥（0.3.5）
+## 八点五、皮肤助手页的设置桥（0.3.5；0.3.7 本地未发增加 FileResume）
 
 皮肤的「皮肤助手」页不能可靠地直接读写别的 addon，因此由插件把主要开关写成
 `Window(home)` 属性；皮肤只读属性、点击时回调：
@@ -198,16 +198,64 @@ RunScript(script.mistuary.helper,action=toggle_setting,key=douban_enabled)
 | `Mistuary.Helper.PlaylistSeason` | `playlist_completion_season` |
 | `Mistuary.Helper.PlaylistFolder` | `playlist_completion_folder` |
 | `Mistuary.Helper.PlaylistNextSeason` | `playlist_completion_next_season` |
+| `Mistuary.Helper.FileResume` | `file_resume`（0.3.7 本地未发） |
 
-属性值为 `"true"` / `"false"`；`toggle_setting` 只接受上表四个 key，未知 key 忽略。
+属性值为 `"true"` / `"false"`；`toggle_setting` 只接受上表五个 key，未知 key 忽略。
 插件未启用时不写属性，皮肤对应行隐藏。
+
+### 8.5.1 文件播放记录属性（0.3.7 本地未发）
+
+插件在 `service.py` 里维护，皮肤只在文件管理器 10003 的聚焦行读取：
+
+| 属性 | 值 |
+|---|---|
+| `Mistuary.FileResume.HasResume` | `"true"` / `"false"`（当前焦点项是否有记录） |
+| `Mistuary.FileResume.Time` | `h:mm:ss` / `m:ss`（保留，列表暂不显示） |
+| `Mistuary.FileResume.Percent` | `0`–`100` 的整数（备用；皮肤数字已烘焙进帧） |
+| `Mistuary.FileResume.PercentKey` | `000`–`100` 三位字符串，对应 `progress/resume_ring/ring_XXX.png` |
+
+- 皮肤在 10003 聚焦行显示 40px 圆环：绿弧 `#89C19F` = 已播、白轨 `60FFFFFF` = 全长、
+  百分比数字烘焙在帧里（白色 14px，无暗底）；共 101 帧（1% 一档），不显示具体时间。
+- 账本没有该路径时，圆环回退 Kodi/Emby 的 `Files.GetFileDetails` 续播点；按路径缓存 10 秒，
+  不会每 0.2 秒发 RPC。
+- 只在 `Window.IsActive(10003)` 时每 0.1 秒更新；焦点切换瞬间 `FolderPath` 为空时先保留上一次属性，
+  持续空 0.2 秒才清；换行时先隐藏旧圆环、30ms 后再显示新值；焦点落到文件夹行、查到非空路径但无记录、或离开窗口时立即清空。
+- 只有 `total > 0` 的记录才画圆环；原生续播点只有位置没有总长时按无记录处理，避免显示 0%。
+- 文件管理器 10003 的 `ListItem.Path` 是当前目录，聚焦项的完整路径在
+  `ListItem.FolderPath`；插件按后者取值。
+- 不是 ListItem 属性，而是 `Window(home)` 属性；Kodi 没有窗口内容更新回调，
+  也没有 `Window.getListItem()`，不要尝试逐项注入。
+- 10003 起播时会打开皮肤自定义窗口 **1115**（560×180，无标题/正文，上下两个按钮）；10025 交给 Kodi 原生弹窗，helper 不抢。
+  弹窗前先暂停播放；选完「继续/从头播放」才恢复；返回键/点空白 = 取消：停止播放并恢复原记录。
+  「继续播放」= seek；「从头播放」= 删除记录、清原生续播点并 seek 到 0。
+- 120 秒内的自动连播（路径不同）不弹窗；**同一路径重新打开仍弹窗**。
+- 记录存在 `addon_data/script.mistuary.helper/resume.db`（SQLite WAL）；
+  Kodi 的 `MyVideos.db` 只通过 JSON-RPC `Files.SetFileDetails` 写，不直接打开。
+
+### 8.5.2 续播弹窗属性（0.3.7 本地未发）
+
+helper 在打开 `Custom_1115_FileResume.xml` 前写 `Window(home)` 属性：
+
+| 属性 | 值 |
+|---|---|
+| `Mistuary.ResumeDialog.Continue` | 按钮一：「从 01:07 继续播放」（时间补两位分钟） |
+| `Mistuary.ResumeDialog.Start` | 按钮二：「从头播放」 |
+| `Mistuary.ResumeDialog.Choice` | 按钮写回：`continue` / `start` / `cancel` |
+
+- 按钮 id 10/11 只负责 `SetProperty(...Choice...,home)`；helper 轮询到 Choice 后
+  `Dialog.Close(1115)` 并清理全部属性。返回/点空白没有 Choice，helper 按 `cancel` 处理。
+- 窗口不存在（别的地方用这个 helper / 皮肤没做 1115）时，回退原生 `yesno`：
+  No = 继续播放（默认焦点），Yes = 从头播放。
+- 继续按钮的文案包含记录时间，不带问号。
 
 ## 九、插件不做什么
 
-- 不写 Kodi 媒体库
+- 不**直接**写 Kodi 媒体库；文件播放记录通过 JSON-RPC `Files.SetFileDetails`
+  写续播点（设置 `file_resume` 可关）
 - 不写皮肤设置
 - 不改用户文件
-- 除播放列表补全的事件驱动 service（两个开关默认关、不轮询）外，不常驻后台
+- 除播放列表补全与文件播放记录的事件驱动 service 外，不常驻后台；
+  唯一的轮询是 10003 焦点行圆环（窗口激活时 0.1 秒一次）
 - 不做播放代理 / 转码 / 字幕下载（Emby 插件在做）
 
 ## 十、已知问题与限制（2026-10-30 更新）
