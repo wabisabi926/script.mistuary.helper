@@ -14,6 +14,7 @@ Kodi 相关代码全部惰性 import。
 from __future__ import annotations
 
 import os
+import re
 import sqlite3
 import threading
 import time
@@ -29,19 +30,25 @@ DEFAULT_START_GRACE = 180
 DEFAULT_END_PERCENT = 8
 TTL_DAYS = 90
 MAX_RECORDS = 5000
+# 10003-only：不写 Kodi MyVideos 原生续播点，resume.db 是唯一来源。
+# 只有将来要把 10025 的原生进度条也交给 helper 管时才改成 True。
+NATIVE_MIRROR = False
 
 RESUME_MIN_SECONDS = 10
 POLL_SECONDS = 0.1
 FOCUS_NATIVE_TTL = 10
+MAINTENANCE_SECONDS = 6 * 3600
 SETTINGS_CACHE_SECONDS = 3.0
 
 PLUGIN_WINDOW = 10003
 HOME_WINDOW = 10000
 
 INELIGIBLE_PREFIXES = (
-    "plugin://", "pvr://", "http://", "https://",
+    "plugin://", "pvr://",
     "sources://", "special://", "videodb://", "library://",
 )
+HTTP_PREFIXES = ("http://", "https://")
+_USERINFO_RE = re.compile(r"(?i)^([a-z][a-z0-9+.-]*://)[^/@]+@")
 
 PROP_HAS_RESUME = "Mistuary.FileResume.HasResume"
 PROP_TIME = "Mistuary.FileResume.Time"
@@ -57,11 +64,15 @@ _SQLITE_TIMEOUT = 5.0
 # 纯逻辑（可单测）
 # ---------------------------------------------------------------------------
 
+def _strip_userinfo(text: str) -> str:
+    return _USERINFO_RE.sub(r"\1", text, count=1)
+
+
 def normalize_key(path) -> str:
-    """账本主键：统一斜杠、去尾斜杠；保留大小写。"""
+    """账本主键：统一斜杠、去尾斜杠、去 URL 里的 user:pass@；保留大小写。"""
     if not path:
         return ""
-    key = str(path).strip().replace("\\", "/")
+    key = _strip_userinfo(str(path).strip().replace("\\", "/"))
     while key.endswith("/"):
         key = key[:-1]
     return key
@@ -104,11 +115,16 @@ def percent_key(percent) -> str:
     return "%03d" % value
 
 
-def is_eligible_path(path) -> bool:
+def is_eligible_path(path, allow_http=False) -> bool:
     key = normalize_key(path)
     if not key:
         return False
-    return not key.casefold().startswith(INELIGIBLE_PREFIXES)
+    lowered = key.casefold()
+    if lowered.startswith(INELIGIBLE_PREFIXES):
+        return False
+    if not allow_http and lowered.startswith(HTTP_PREFIXES):
+        return False
+    return True
 
 
 def source_for_path(path) -> str:
@@ -251,7 +267,7 @@ class ResumeStore:
                 "INSERT OR REPLACE INTO file_resume"
                 "(path_key, key_fold, path, pos, total, updated_at, source) "
                 "VALUES (?,?,?,?,?,?,?)",
-                (key, fold_key(key), str(path), position, total, ts,
+                (key, fold_key(key), key, position, total, ts,
                  source or source_for_path(path)),
             )
             conn.commit()
@@ -293,26 +309,78 @@ class ResumeStore:
 
     def cleanup(self, now=None, ttl_days=TTL_DAYS, max_records=MAX_RECORDS) -> int:
         """删过期记录，并把总量压到 max_records 以内。返回删除条数。"""
-        cutoff = int((now if now is not None else time.time()) - ttl_days * 86400)
+        removed = 0
         with self._lock:
             conn = self._require()
-            cur = conn.execute("DELETE FROM file_resume WHERE updated_at<?", (cutoff,))
-            removed = cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
-            cur = conn.execute(
-                "DELETE FROM file_resume WHERE path_key NOT IN ("
-                "SELECT path_key FROM file_resume ORDER BY updated_at DESC LIMIT ?)",
-                (int(max_records),),
-            )
-            if cur.rowcount and cur.rowcount > 0:
-                removed += cur.rowcount
+            if ttl_days and ttl_days > 0:
+                cutoff = int((now if now is not None else time.time()) - ttl_days * 86400)
+                cur = conn.execute("DELETE FROM file_resume WHERE updated_at<?", (cutoff,))
+                removed = cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
+            if max_records and max_records > 0:
+                cur = conn.execute(
+                    "DELETE FROM file_resume WHERE path_key NOT IN ("
+                    "SELECT path_key FROM file_resume ORDER BY updated_at DESC LIMIT ?)",
+                    (int(max_records),),
+                )
+                if cur.rowcount and cur.rowcount > 0:
+                    removed += cur.rowcount
             conn.commit()
         return removed
+
+    def clear_all(self) -> int:
+        with self._lock:
+            conn = self._require()
+            cur = conn.execute("DELETE FROM file_resume")
+            removed = cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
+            conn.commit()
+        return removed
+
+    def data_version(self) -> int:
+        """SQLite 的跨连接版本号：别的进程写库后这里会变。"""
+        with self._lock:
+            row = self._require().execute("PRAGMA data_version").fetchone()
+        return int(row[0]) if row else 0
 
     def count(self) -> int:
         with self._lock:
             conn = self._require()
             row = conn.execute("SELECT COUNT(*) FROM file_resume").fetchone()
         return int(row[0]) if row else 0
+
+
+def maintenance_action(action):
+    """设置页按钮：查看条数 / 立即清理 / 清空全部。"""
+    import xbmcaddon
+    import xbmcgui
+    import xbmcvfs
+
+    profile = xbmcvfs.translatePath(
+        "special://profile/addon_data/script.mistuary.helper"
+    )
+    store = ResumeStore(os.path.join(profile, "resume.db"))
+    name = xbmcaddon.Addon("script.mistuary.helper").getAddonInfo("name")
+    try:
+        store.open()
+        if action == "file_resume_status":
+            xbmcgui.Dialog().notification(
+                name, i18n.t(32101, store.count()),
+                xbmcgui.NOTIFICATION_INFO, 3000
+            )
+        elif action == "file_resume_clear":
+            if xbmcgui.Dialog().yesno(i18n.t(32070), i18n.t(32096)):
+                store.clear_all()
+                xbmcgui.Dialog().notification(
+                    name, i18n.t(32097), xbmcgui.NOTIFICATION_INFO, 3000
+                )
+        else:
+            removed = store.cleanup(
+                ttl_days=retention_days(), max_records=max_records()
+            )
+            xbmcgui.Dialog().notification(
+                name, i18n.t(32100, removed), xbmcgui.NOTIFICATION_INFO, 3000
+            )
+    finally:
+        store.close()
 
 
 # ---------------------------------------------------------------------------
@@ -342,6 +410,33 @@ def _setting_bool(name, default=False) -> bool:
         return bool(xbmcaddon.Addon("script.mistuary.helper").getSettingBool(name))
     except Exception:  # noqa: BLE001
         return default
+
+
+def _setting_string(name, default="") -> str:
+    try:
+        import xbmcaddon
+
+        value = xbmcaddon.Addon("script.mistuary.helper").getSettingString(name)
+        return value or default
+    except Exception:  # noqa: BLE001
+        return default
+
+
+def retention_days() -> int:
+    """保留天数：0 = 永不按时间清理。"""
+    try:
+        value = int(_setting_string("file_resume_ttl_days", str(TTL_DAYS)))
+    except (TypeError, ValueError):
+        value = TTL_DAYS
+    return max(0, value)
+
+
+def max_records() -> int:
+    try:
+        value = int(_setting_string("file_resume_max_records", str(MAX_RECORDS)))
+    except (TypeError, ValueError):
+        value = MAX_RECORDS
+    return value if value > 0 else MAX_RECORDS
 
 
 def _myvideos_resume_enabled() -> bool:
@@ -393,7 +488,7 @@ def _from_filemanager() -> bool:
         return False
 
 
-def _best_playback_path(item):
+def _best_playback_path(item, allow_http=False):
     """优先拿 .strm 本体路径，避免记到解析后的 http 地址上。"""
     candidates = []
     file_path = (item.get("file") or "").strip()
@@ -413,10 +508,10 @@ def _best_playback_path(item):
 
     for candidate in candidates:
         if (candidate.casefold().endswith(".strm")
-                and is_eligible_path(candidate)):
+                and is_eligible_path(candidate, allow_http=allow_http)):
             return candidate
     for candidate in candidates:
-        if is_eligible_path(candidate):
+        if is_eligible_path(candidate, allow_http=allow_http):
             return candidate
     return ""
 
@@ -456,8 +551,11 @@ class FileResumeManager:
         self._sample_stop = None
         self._stop = threading.Event()
         self._poll_thread = None
+        self._maint_thread = None
         self._cache = {}
         self._cache_fold = {}
+        self._cache_version = 0
+        self._last_version_check = 0.0
         self._focus_native = {}
         self._last_props = None
         self._enabled_cache = (0.0, True)
@@ -487,15 +585,13 @@ class FileResumeManager:
     def start(self):
         try:
             self.store.open()
-            rows = self.store.recent(
-                since=time.time() - TTL_DAYS * 86400, limit=MAX_RECORDS
-            )
-            removed = self.store.cleanup()
-            with self._lock:
-                self._cache = {row["key"]: row for row in rows}
-                self._cache_fold = {fold_key(row["key"]): row for row in rows}
+            ttl = retention_days()
+            maxr = max_records()
+            removed = self.store.cleanup(ttl_days=ttl, max_records=maxr)
+            self._reload_cache(ttl, maxr)
+            self._cache_version = self.store.data_version()
             log.info("file resume: %d records, %d expired" %
-                     (len(rows), removed))
+                     (len(self._cache), removed))
         except Exception as exc:  # noqa: BLE001 - 服务不能因账本失败退出
             log.error("file resume store failed: %s" % exc)
 
@@ -503,7 +599,32 @@ class FileResumeManager:
             target=self._poll_loop, name="file-resume-focus", daemon=True
         )
         self._poll_thread.start()
+        self._maint_thread = threading.Thread(
+            target=self._maintenance_loop, name="file-resume-maint", daemon=True
+        )
+        self._maint_thread.start()
         self._publish(None)
+
+    def _reload_cache(self, ttl, maxr):
+        since = time.time() - ttl * 86400 if ttl > 0 else None
+        rows = self.store.recent(since=since, limit=maxr)
+        with self._lock:
+            self._cache = {row["key"]: row for row in rows}
+            self._cache_fold = {fold_key(row["key"]): row for row in rows}
+            self._focus_native.clear()
+
+    def _maintenance_loop(self):
+        while not self._stop.wait(MAINTENANCE_SECONDS):
+            try:
+                ttl = retention_days()
+                maxr = max_records()
+                removed = self.store.cleanup(ttl_days=ttl, max_records=maxr)
+                self._reload_cache(ttl, maxr)
+                self._cache_version = self.store.data_version()
+                if removed:
+                    log.info("file resume maintenance: removed %d" % removed)
+            except Exception as exc:  # noqa: BLE001
+                log.error("file resume maintenance failed: %s" % exc)
 
     def stop(self):
         self._stop.set()
@@ -526,10 +647,15 @@ class FileResumeManager:
             item = _player_item()
             if is_library_item(item):
                 return
-            if not self._enabled() or not self._native_enabled():
+            # 只记录皮肤 10003 文件管理器里的播放；10025/插件播放不记。
+            if not _from_filemanager():
+                return
+            if not self._enabled():
                 return
 
-            path = _best_playback_path(item)
+            path = _best_playback_path(
+                item, allow_http=_setting_bool("file_resume_http", False)
+            )
             if not path:
                 return
             total = float(player.getTotalTime() or 0)
@@ -670,7 +796,7 @@ class FileResumeManager:
     def _persist_snapshot(self, current, mirror=False):
         if not current:
             return
-        if not self._enabled() or not self._native_enabled():
+        if not self._enabled():
             return
 
         if is_finished(current["pos"], current["total"], self._end_percent):
@@ -713,7 +839,7 @@ class FileResumeManager:
             log.error("file resume save failed: %s" % exc)
 
     def _save_and_mirror(self, current):
-        if not self._enabled() or not self._native_enabled():
+        if not self._enabled():
             return
         if not should_save(current["pos"], current["total"],
                            self._start_grace, self._end_percent):
@@ -722,6 +848,8 @@ class FileResumeManager:
         self._mirror(current)
 
     def _mirror(self, current, clear=False):
+        if not NATIVE_MIRROR:
+            return
         if not self._native_enabled():
             return
         position = 0 if clear else int(max(0.0, current["pos"]))
@@ -872,6 +1000,8 @@ class FileResumeManager:
     # -- 清理媒体库后恢复 --------------------------------------------------
 
     def _restore_native(self):
+        if not NATIVE_MIRROR:
+            return
         try:
             time.sleep(3.0)
             rows = self.store.recent(
@@ -903,6 +1033,14 @@ class FileResumeManager:
         last_path = None
         while not self._stop.is_set():
             try:
+                # 别的进程（设置里的清理/清空）改过库时，5 秒内刷新缓存。
+                now = time.time()
+                if now - self._last_version_check >= 5.0:
+                    self._last_version_check = now
+                    version = self.store.data_version()
+                    if version != self._cache_version:
+                        self._reload_cache(retention_days(), max_records())
+                        self._cache_version = version
                 if self._enabled() and xbmc.getCondVisibility(
                         "Window.IsActive(%d)" % PLUGIN_WINDOW):
                     # 文件管理器 10003 的 ListItem.Path 是当前目录，

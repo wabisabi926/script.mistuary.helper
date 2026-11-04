@@ -86,6 +86,53 @@
                     <default>true</default>
                     <control type="toggle"/>
                 </setting>
+                <setting id="file_resume_http" type="boolean" label="32106" help="32107">
+                    <level>0</level>
+                    <default>false</default>
+                    <control type="toggle"/>
+                </setting>
+                <setting id="file_resume_ttl_days" type="string" label="32083" help="32084">
+                    <level>0</level>
+                    <default>90</default>
+                    <control type="spinner" format="string"/>
+                    <constraints>
+                        <options>
+                            <option label="32085">30</option>
+                            <option label="32086">90</option>
+                            <option label="32087">180</option>
+                            <option label="32088">365</option>
+                            <option label="32089">0</option>
+                        </options>
+                    </constraints>
+                </setting>
+                <setting id="file_resume_max_records" type="string" label="32090" help="32091">
+                    <level>0</level>
+                    <default>5000</default>
+                    <control type="spinner" format="string"/>
+                    <constraints>
+                        <options>
+                            <option label="32102">1000</option>
+                            <option label="32103">3000</option>
+                            <option label="32104">5000</option>
+                            <option label="32105">10000</option>
+                        </options>
+                    </constraints>
+                </setting>
+                <setting id="file_resume_status" type="action" label="32098" help="32099">
+                    <level>0</level>
+                    <data>RunScript(script.mistuary.helper,action=file_resume_status)</data>
+                    <control type="button" format="action"/>
+                </setting>
+                <setting id="file_resume_clean_now" type="action" label="32092" help="32093">
+                    <level>0</level>
+                    <data>RunScript(script.mistuary.helper,action=file_resume_clean)</data>
+                    <control type="button" format="action"/>
+                </setting>
+                <setting id="file_resume_clear_all" type="action" label="32094" help="32095">
+                    <level>0</level>
+                    <data>RunScript(script.mistuary.helper,action=file_resume_clear)</data>
+                    <control type="button" format="action"/>
+                </setting>
             </group>
         </category>
 

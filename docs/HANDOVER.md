@@ -43,36 +43,40 @@
 | 代表集技术标识 | ❌ | M3 明确不做，插件侧已移除空壳 |
 | 播放地址 | ✅ 实机通过 | `mode=play` 直连 Emby 插件，2026-10-30 验收；直链兜底不需要 |
 | 播放列表补全 | ✅ 0.3.4 | 两个独立开关：媒体库剧集按季补全 / 文件夹播放按目录补全（视频与音乐）；默认关，只加不播 |
-| 文件播放记录 | ✅ 0.3.7 本地未发 | 文件管理器 10003 弹窗 + 焦点行圆环；10025 走 Kodi 原生；账本 `resume.db`，默认开 |
+| 文件播放记录 | ✅ 0.3.7 本地未发 | 只记文件管理器 10003：弹窗 + 焦点行圆环；不写 Kodi 原生续播点；账本 `resume.db`，默认开 |
 
 ## 2.5 文件播放记录（0.3.7 本地未发）
 
 - 入口：设置 → 文件管理器；首页「文件」源卡片（`target=filemanager`）。两者都是
   Kodi 窗口 10003，原生不处理续播，所以由本插件负责。
-- 播放开始时若 `Window.Previous(filemanager)` 为真，弹「从 01:07 继续播放 / 从头播放」；
-  视频「文件」窗口 10025 交给 Kodi 原生弹窗，插件不抢。
-- 存储两层：
-  - 账本 `addon_data/script.mistuary.helper/resume.db`（SQLite WAL）：30 秒采样 +
+- 只处理文件管理器 10003 的播放（`Window.Previous(filemanager)`）；10025 和插件播放不记账、不弹窗。
+- 协议：本地盘符/Unix、UNC、smb/nfs/ftp/sftp/dav/webdav/upnp、`.strm`、`.iso` 都记；
+  `http(s)://` 默认不记，可在设置里打开（`file_resume_http`）。
+- 账本 key/展示路径会剥掉 URL 里的 `user:pass@`；带 token 的直链仍会随保留期过期。
+- 存储只有账本一层：
+  - `addon_data/script.mistuary.helper/resume.db`（SQLite WAL）：30 秒采样 +
     暂停/拖动/停止/切集；路径归一化主键 + `key_fold` 大小写回退；`.strm` 用本体路径。
-  - Kodi `MyVideos*.db` 只通过 JSON-RPC `Files.SetFileDetails` 镜像：暂停/拖动/停止 +
-    每 5 分钟；`myvideos.resume` 关闭时一律不写。
+  - **不写 Kodi `MyVideos.db` / 原生续播点**（`NATIVE_MIRROR=False`）；也不依赖 `myvideos.resume` 开关。
 - 阈值：起播 180 秒内不写，剩余 ≤8% 清除；读 `advancedsettings` 的同名配置。
-- 账本启动时清 90 天前记录、上限 5000 条；`Monitor.onCleanFinished` 后恢复最多 500 条。
+- 保留：默认 90 天 / 5000 条，可在插件设置里改为 30/90/180/365 天或「永不」，
+  上限 1000/3000/5000/10000；启动时 + 每 6 小时清理，别的进程改库后 5 秒内刷新缓存。
+- 设置页「文件播放记录」：保留天数、最多记录、查看记录数、立即清理、清空全部（二次确认）。
+- 账本没有时只读回退 `Files.GetFileDetails`，不写回；不写 Kodi 原生续播点。
 - 10003 焦点行圆环：仅在窗口激活时每 0.1 秒读当前焦点项，写
   `Window(home)` 的 `Mistuary.FileResume.HasResume / Percent / PercentKey`；
   皮肤显示 40px 绿弧（已播）/白轨（全长）/百分比数字（烘焙在帧里），共 101 帧；
-  账本无记录时回退 `Files.GetFileDetails` 续播点（按路径缓存 10 秒），只有 `total>0` 才显示；
+  账本无记录时只读回退 `Files.GetFileDetails` 续播点（按路径缓存 10 秒），只有 `total>0` 才显示；
   焦点切换瞬间空路径先保留、持续 0.2 秒才清；换行时先隐藏旧圆环 30ms 再显示新值，避免残留。
 - 10003 续播弹窗：打开皮肤自定义窗口 1115（560×180，无标题/正文，上下两个按钮）；
   播放开始后**先暂停**再弹窗（不再等 450ms），选完才恢复播放。
   按钮「从 01:07 继续播放」/「从头播放」，默认焦点继续；返回/点空白 = 停止播放并恢复原记录。
-  「继续播放」= seek；「从头播放」= 删记录、清原生续播点并 seek 到 0。
+  「继续播放」= seek；「从头播放」= 删记录并 seek 到 0。
   面板/透明度由皮肤决定（round20 + 浮窗档）。
   120 秒内路径不同的自动连播不弹窗，同一路径重开仍弹窗。窗口缺失时回退原生 yes/no（No = 继续播放）。
 - 开关：`file_resume`（默认开），皮肤助手页可切；`skin_bridge` 暴露
   `Mistuary.Helper.FileResume`。
-- 单测：`tests/test_file_resume.py` 28 项；总计 174 项。
-- **实机验证（2026-11-04）**：`.strm` 播放到 5:00 停止后，账本与原生书签都写入 300s；
+- 单测：`tests/test_file_resume.py` 全覆盖；总计 189 项。
+- **实机验证（2026-11-04）**：`.strm` 播放到 5:00 停止后账本写入 300s；
   再次播放 1.0 秒弹出 1115 紧凑弹窗，默认「继续播放」，回车跳到 5:19；
   10003 焦点行属性 `HasResume / Percent / PercentKey` = true / 7 / 007。
 
@@ -89,8 +93,8 @@
 
 - `Files.GetDirectory` / `Files.GetFileDetails` 只对**已配置媒体源**内的路径生效；
   非源路径返回 `Invalid params`（2026-11-04 实测）。
-- `Files.SetFileDetails`（写续播点）不受此限，非源路径也能写。
-- 所以原生回退/恢复只对源内文件可靠；非源路径以 `resume.db` 账本为准。
+- `Files.SetFileDetails`（写续播点）本版本**不再使用**；原生续播点只读回退。
+- 原生回退只对源内文件可靠；非源路径以 `resume.db` 账本为准。
 
 ## 3. 已修复的两个 Kodi 偶发问题
 
@@ -170,7 +174,7 @@ Kodi 日志报 `CGUIMediaWindow::GetDirectory(...) failed`。
 
 ```bash
 cd D:/下载/AI/script.mistuary.helper
-python -m unittest discover -s tests -p 'test_*.py'   # 189 项
+python -m unittest discover -s tests -p 'test_*.py'   # 197 项
 python -m compileall -q default.py lib
 ```
 

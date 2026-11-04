@@ -67,6 +67,13 @@ def main():
         kodi.end_directory(HANDLE)
         return
 
+    if req.action in ("file_resume_clean", "file_resume_clear", "file_resume_status"):
+        from lib import file_resume
+
+        file_resume.maintenance_action(req.action)
+        kodi.end_directory(HANDLE)
+        return
+
     if req.action == "settings_snapshot":
         from lib import skin_bridge
 

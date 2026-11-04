@@ -139,13 +139,29 @@ class I18nFallbackTest(unittest.TestCase):
 class EligibilityTest(unittest.TestCase):
     def test_real_paths(self):
         for path in ("/media/a.mkv", "smb://nas/a.mkv", "nfs://nas/a.strm",
-                     "D:\\media\\a.iso"):
+                     "D:\\media\\a.iso", "//nas/share/a.mkv", "ftp://nas/a.mkv",
+                     "sftp://nas/a.mkv", "dav://nas/a.mkv",
+                     "webdav://nas/a.mkv", "upnp://nas/a.mkv"):
             self.assertTrue(file_resume.is_eligible_path(path), path)
 
     def test_excluded_schemes(self):
         for path in ("plugin://video/?id=1", "pvr://channels/1", "http://x/a.mkv",
                      "https://x/a.mkv", "special://profile/a.mkv", "videodb://movies"):
             self.assertFalse(file_resume.is_eligible_path(path), path)
+
+    def test_http_opt_in(self):
+        self.assertTrue(file_resume.is_eligible_path("https://x/a.mkv", allow_http=True))
+        self.assertTrue(file_resume.is_eligible_path("http://x/a.mkv", allow_http=True))
+        self.assertFalse(file_resume.is_eligible_path("plugin://x/a.mkv", allow_http=True))
+        self.assertFalse(file_resume.is_eligible_path("pvr://x/a.mkv", allow_http=True))
+
+    def test_credentials_are_stripped(self):
+        self.assertEqual(file_resume.normalize_key("ftp://user:pass@host/a.mkv"),
+                         "ftp://host/a.mkv")
+        self.assertEqual(file_resume.normalize_key("smb://user@host/share/a.mkv"),
+                         "smb://host/share/a.mkv")
+        self.assertEqual(file_resume.normalize_key("smb://host/share/a@b.mkv"),
+                         "smb://host/share/a@b.mkv")
 
     def test_empty(self):
         self.assertFalse(file_resume.is_eligible_path(""))
@@ -183,6 +199,55 @@ class LibraryItemTest(unittest.TestCase):
         self.assertFalse(file_resume.is_library_item(None))
 
 
+class RetentionSettingsTest(unittest.TestCase):
+    def test_retention_values(self):
+        with mock.patch.object(file_resume, "_setting_string", return_value="180"):
+            self.assertEqual(file_resume.retention_days(), 180)
+        with mock.patch.object(file_resume, "_setting_string", return_value="0"):
+            self.assertEqual(file_resume.retention_days(), 0)
+        with mock.patch.object(file_resume, "_setting_string", return_value="bad"):
+            self.assertEqual(file_resume.retention_days(), 90)
+
+    def test_max_records_values(self):
+        with mock.patch.object(file_resume, "_setting_string", return_value="1000"):
+            self.assertEqual(file_resume.max_records(), 1000)
+        with mock.patch.object(file_resume, "_setting_string", return_value="0"):
+            self.assertEqual(file_resume.max_records(), 5000)
+
+
+class ResumeStoreMaintenanceTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.store = file_resume.ResumeStore(os.path.join(self.tmp.name, "resume.db"))
+        self.store.open()
+
+    def tearDown(self):
+        self.store.close()
+        self.tmp.cleanup()
+
+    def test_cleanup_never_still_enforces_limit(self):
+        now = 10_000_000
+        self.store.upsert("/media/a.mkv", 100, 1000, now=now - 300)
+        self.store.upsert("/media/b.mkv", 100, 1000, now=now - 200)
+        self.store.upsert("/media/c.mkv", 100, 1000, now=now - 100)
+        removed = self.store.cleanup(now=now, ttl_days=0, max_records=2)
+        self.assertEqual(removed, 1)
+        self.assertEqual(self.store.count(), 2)
+        self.assertIsNone(self.store.get("/media/a.mkv"))
+
+    def test_clear_all(self):
+        self.store.upsert("/media/a.mkv", 100, 1000)
+        self.store.upsert("/media/b.mkv", 100, 1000)
+        self.assertEqual(self.store.clear_all(), 2)
+        self.assertEqual(self.store.count(), 0)
+
+    def test_data_version_changes(self):
+        before = self.store.data_version()
+        self.store.upsert("/media/a.mkv", 100, 1000)
+        self.assertIsInstance(before, int)
+        self.assertIsInstance(self.store.data_version(), int)
+
+
 class ResumeStoreTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -199,6 +264,12 @@ class ResumeStoreTest(unittest.TestCase):
         self.assertEqual(row["pos"], 1200)
         self.assertEqual(row["total"], 7200)
         self.assertEqual(row["source"], "file")
+
+    def test_upsert_strips_credentials(self):
+        path = "ftp://user:pass@host/a.mkv"
+        self.store.upsert(path, 1200, 7200)
+        row = self.store.get(path)
+        self.assertEqual(row["path"], "ftp://host/a.mkv")
 
     def test_strm_source(self):
         self.store.upsert("/media/a.strm", 1200, 7200)

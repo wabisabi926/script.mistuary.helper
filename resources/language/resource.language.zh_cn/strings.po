@@ -223,3 +223,103 @@ msgstr "继续播放"
 msgctxt "#32078"
 msgid "Cancel"
 msgstr "取消"
+
+msgctxt "#32083"
+msgid "Retention days"
+msgstr "保留天数"
+
+msgctxt "#32084"
+msgid "How long to keep records; Never = only trim by limit"
+msgstr "记录保留时长；永不 = 只按上限清理"
+
+msgctxt "#32085"
+msgid "30 days"
+msgstr "30 天"
+
+msgctxt "#32086"
+msgid "90 days"
+msgstr "90 天"
+
+msgctxt "#32087"
+msgid "180 days"
+msgstr "180 天"
+
+msgctxt "#32088"
+msgid "365 days"
+msgstr "365 天"
+
+msgctxt "#32089"
+msgid "Never"
+msgstr "永不"
+
+msgctxt "#32090"
+msgid "Maximum records"
+msgstr "最多记录"
+
+msgctxt "#32091"
+msgid "Delete the oldest records above the limit"
+msgstr "超过上限时删除最旧的记录"
+
+msgctxt "#32092"
+msgid "Clean up now"
+msgstr "立即清理"
+
+msgctxt "#32093"
+msgid "Remove expired and over-limit records"
+msgstr "清理过期和超出上限的记录"
+
+msgctxt "#32094"
+msgid "Clear all records"
+msgstr "清空全部记录"
+
+msgctxt "#32095"
+msgid "Delete all file playback records permanently"
+msgstr "删除所有文件播放记录，不可恢复"
+
+msgctxt "#32096"
+msgid "Clear all file playback records?"
+msgstr "确定清空全部文件播放记录？"
+
+msgctxt "#32097"
+msgid "All file playback records cleared"
+msgstr "已清空全部文件播放记录"
+
+msgctxt "#32098"
+msgid "Show record count"
+msgstr "查看记录数"
+
+msgctxt "#32099"
+msgid "Show the number of stored records"
+msgstr "显示当前保留的记录条数"
+
+msgctxt "#32100"
+msgid "Removed {0} records"
+msgstr "已清理 {0} 条记录"
+
+msgctxt "#32101"
+msgid "{0} records stored"
+msgstr "当前 {0} 条记录"
+
+msgctxt "#32102"
+msgid "1000"
+msgstr "1000"
+
+msgctxt "#32103"
+msgid "3000"
+msgstr "3000"
+
+msgctxt "#32104"
+msgid "5000"
+msgstr "5000"
+
+msgctxt "#32105"
+msgid "10000"
+msgstr "10000"
+
+msgctxt "#32106"
+msgid "Record HTTP(S) videos"
+msgstr "记录 HTTP(S) 视频"
+
+msgctxt "#32107"
+msgid "Off by default. Useful for fixed HTTP/WebDAV sources; tokenized links expire with retention"
+msgstr "默认关闭。只对固定的 HTTP/WebDAV 源有用；带 token 的直链会随保留期过期"

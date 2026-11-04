@@ -225,12 +225,17 @@ RunScript(script.mistuary.helper,action=toggle_setting,key=douban_enabled)
   `ListItem.FolderPath`；插件按后者取值。
 - 不是 ListItem 属性，而是 `Window(home)` 属性；Kodi 没有窗口内容更新回调，
   也没有 `Window.getListItem()`，不要尝试逐项注入。
-- 10003 起播时会打开皮肤自定义窗口 **1115**（560×180，无标题/正文，上下两个按钮）；10025 交给 Kodi 原生弹窗，helper 不抢。
+- 10003 起播时会打开皮肤自定义窗口 **1115**（560×180，无标题/正文，上下两个按钮）；
+  **只记录 10003 文件管理器的播放**，10025 与插件播放不记账、不弹窗。
   弹窗前先暂停播放；选完「继续/从头播放」才恢复；返回键/点空白 = 取消：停止播放并恢复原记录。
-  「继续播放」= seek；「从头播放」= 删除记录、清原生续播点并 seek 到 0。
+  「继续播放」= seek；「从头播放」= 删除记录并 seek 到 0。
+- 协议：本地/UNC/smb/nfs/ftp/sftp/dav/webdav/upnp、`.strm`、`.iso` 记录；
+  `http(s)://` 默认排除，设置 `file_resume_http` 可打开。URL 里的 `user:pass@` 不入库。
 - 120 秒内的自动连播（路径不同）不弹窗；**同一路径重新打开仍弹窗**。
-- 记录存在 `addon_data/script.mistuary.helper/resume.db`（SQLite WAL）；
-  Kodi 的 `MyVideos.db` 只通过 JSON-RPC `Files.SetFileDetails` 写，不直接打开。
+- 记录只存在 `addon_data/script.mistuary.helper/resume.db`（SQLite WAL）；
+  **不写 `MyVideos.db` / Kodi 原生续播点**；账本没有时只读回退 `Files.GetFileDetails`。
+- 保留：默认 90 天 / 5000 条，可在插件设置调整；启动时 + 每 6 小时清理；
+  设置页提供查看条数、立即清理、清空全部（二次确认）。
 
 ### 8.5.2 续播弹窗属性（0.3.7 本地未发）
 
@@ -250,8 +255,8 @@ helper 在打开 `Custom_1115_FileResume.xml` 前写 `Window(home)` 属性：
 
 ## 九、插件不做什么
 
-- 不**直接**写 Kodi 媒体库；文件播放记录通过 JSON-RPC `Files.SetFileDetails`
-  写续播点（设置 `file_resume` 可关）
+- 不写 Kodi 媒体库，也不写 Kodi 原生续播点；文件播放记录只写自己的 `resume.db`
+  （设置 `file_resume` 可关）
 - 不写皮肤设置
 - 不改用户文件
 - 除播放列表补全与文件播放记录的事件驱动 service 外，不常驻后台；

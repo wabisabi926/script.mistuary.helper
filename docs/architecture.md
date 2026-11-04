@@ -25,7 +25,7 @@ script.mistuary.helper/
 │   ├── kodi.py                ListItem 构造、窗口属性桥
 │   ├── douban.py              M2：豆瓣取分
 │   ├── playlist_sync.py       播放列表补全（事件驱动）
-│   └── file_resume.py         文件播放记录：SQLite 账本 + Kodi 续播点镜像
+│   └── file_resume.py         文件播放记录：SQLite 账本（仅 10003）
 ├── resources/
 │   ├── settings.xml
 │   └── language/{en_gb,zh_cn}/strings.po
@@ -55,8 +55,8 @@ service.py（常驻）
    ├─ onAVStarted ──> playlist_sync.extend_playlist()      补队列
    └─ onAVStarted / pause / seek / stop / ended
           └─> file_resume.FileResumeManager
-                 ├─ resume.db（SQLite WAL）              账本
-                 ├─ Files.SetFileDetails（JSON-RPC）      Kodi 原生镜像
+                 ├─ resume.db（SQLite WAL）              账本（唯一写入）
+                 ├─ Files.GetFileDetails（只读回退）      已有原生续播点，不写回
                  ├─ 10003 弹窗（继续 / 从头）
                  └─ Window(home) 属性（10003 焦点行圆环）
 ```
@@ -90,10 +90,10 @@ service.py（常驻）
 0.3.4 起新增事件驱动的 `service.py`，只做**播放列表补全**：不轮询、不缓存，
 两个开关默认关；都关时 `onAVStarted` 立即返回，等同于没有这个服务。
 
-0.3.7（本地未发）在同一个 service 里加**文件播放记录**：`resume.db` 是自己的
-SQLite 账本（WAL），高频写只落这里；Kodi 的 `MyVideos.db` 只在暂停/拖动/停止和
-每 5 分钟通过 JSON-RPC 写一次，从不直接打开。唯一的轮询是 10003 文件管理器的
-焦点行圆环（0.2 秒一次，只在窗口激活时跑，只查内存字典）。
+0.3.7（本地未发）在同一个 service 里加**文件播放记录**：只处理 10003 文件管理器；
+`resume.db` 是自己的 SQLite 账本（WAL），高频写只落这里；**不写 Kodi `MyVideos.db`
+/ 原生续播点**，账本没有时只读回退。启动时 + 每 6 小时按保留天数/上限清理；
+唯一的轮询是 10003 文件管理器的焦点行圆环（0.1 秒一次，只在窗口激活时跑，只查内存字典）。
 
 ## 为什么某些模块不 import xbmc
 
@@ -111,8 +111,8 @@ SQLite 账本（WAL），高频写只落这里；Kodi 的 `MyVideos.db` 只在�
 | `provides=video` | 没有它，`plugin://` 路径仍能打开，但 content type 未知，皮肤 `Container.Content(movies)` 判断会失效 |
 | 缓存 key 用 `sha1` 文件名 | key 里有中文和 `|`，直接当文件名在某些文件系统上出问题 |
 | 空结果也缓存 | 用户连续打字时不必每次都打服务端；TTL 只有 5 分钟 |
-| 文件播放记录用自有 SQLite 账本 | 不直接写 `MyVideos.db`、不依赖它的表结构；清理媒体库后还能从账本恢复；高频写留在 WAL 小库 |
-| Kodi 续播点只走 JSON-RPC | 让 Kodi 自己加锁/开事务；helper 不承担数据库锁风险 |
+| 文件播放记录用自有 SQLite 账本 | 只记 10003、不碰 `MyVideos.db`/原生续播点；高频写留在 WAL 小库，清理媒体库不影响账本 |
+| 原生续播点只读 | 账本没有时读 `Files.GetFileDetails` 兜底，不写回；避免和 Kodi/Emby 的所有权混淆 |
 | 失败**不**缓存 | 一次网络抖动会锁死 5 分钟 |
 | 缓存写失败静默 | 缓存是优化不是功能，写不进去也要能正常返回结果 |
 | 过滤 Kodi 的 `resume:*` argv | Kodi 21+ 目录调用会额外传 `resume:false`；不丢弃会污染搜索词（0.2.1） |

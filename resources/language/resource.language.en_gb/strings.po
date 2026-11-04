@@ -223,3 +223,103 @@ msgstr "Continue"
 msgctxt "#32078"
 msgid "Cancel"
 msgstr "Cancel"
+
+msgctxt "#32083"
+msgid "Retention days"
+msgstr "Retention days"
+
+msgctxt "#32084"
+msgid "How long to keep records; Never = only trim by limit"
+msgstr "How long to keep records; Never = only trim by limit"
+
+msgctxt "#32085"
+msgid "30 days"
+msgstr "30 days"
+
+msgctxt "#32086"
+msgid "90 days"
+msgstr "90 days"
+
+msgctxt "#32087"
+msgid "180 days"
+msgstr "180 days"
+
+msgctxt "#32088"
+msgid "365 days"
+msgstr "365 days"
+
+msgctxt "#32089"
+msgid "Never"
+msgstr "Never"
+
+msgctxt "#32090"
+msgid "Maximum records"
+msgstr "Maximum records"
+
+msgctxt "#32091"
+msgid "Delete the oldest records above the limit"
+msgstr "Delete the oldest records above the limit"
+
+msgctxt "#32092"
+msgid "Clean up now"
+msgstr "Clean up now"
+
+msgctxt "#32093"
+msgid "Remove expired and over-limit records"
+msgstr "Remove expired and over-limit records"
+
+msgctxt "#32094"
+msgid "Clear all records"
+msgstr "Clear all records"
+
+msgctxt "#32095"
+msgid "Delete all file playback records permanently"
+msgstr "Delete all file playback records permanently"
+
+msgctxt "#32096"
+msgid "Clear all file playback records?"
+msgstr "Clear all file playback records?"
+
+msgctxt "#32097"
+msgid "All file playback records cleared"
+msgstr "All file playback records cleared"
+
+msgctxt "#32098"
+msgid "Show record count"
+msgstr "Show record count"
+
+msgctxt "#32099"
+msgid "Show the number of stored records"
+msgstr "Show the number of stored records"
+
+msgctxt "#32100"
+msgid "Removed {0} records"
+msgstr "Removed {0} records"
+
+msgctxt "#32101"
+msgid "{0} records stored"
+msgstr "{0} records stored"
+
+msgctxt "#32102"
+msgid "1000"
+msgstr "1000"
+
+msgctxt "#32103"
+msgid "3000"
+msgstr "3000"
+
+msgctxt "#32104"
+msgid "5000"
+msgstr "5000"
+
+msgctxt "#32105"
+msgid "10000"
+msgstr "10000"
+
+msgctxt "#32106"
+msgid "Record HTTP(S) videos"
+msgstr "Record HTTP(S) videos"
+
+msgctxt "#32107"
+msgid "Off by default. Useful for fixed HTTP/WebDAV sources; tokenized links expire with retention"
+msgstr "Off by default. Useful for fixed HTTP/WebDAV sources; tokenized links expire with retention"

@@ -10,7 +10,7 @@
 ## 2. 发版前自检
 
 ```bash
-python -m unittest discover -s tests -p 'test_*.py'   # 当前 189 项
+python -m unittest discover -s tests -p 'test_*.py'   # 当前 197 项
 python -m compileall -q default.py lib
 ```
 
