@@ -86,11 +86,6 @@
                     <default>true</default>
                     <control type="toggle"/>
                 </setting>
-                <setting id="file_resume_http" type="boolean" label="32106" help="32107">
-                    <level>0</level>
-                    <default>false</default>
-                    <control type="toggle"/>
-                </setting>
                 <setting id="file_resume_ttl_days" type="string" label="32083" help="32084">
                     <level>0</level>
                     <default>90</default>
@@ -118,6 +113,13 @@
                         </options>
                     </constraints>
                 </setting>
+                <setting id="file_resume_http" type="boolean" label="32106" help="32107">
+                    <level>0</level>
+                    <default>false</default>
+                    <control type="toggle"/>
+                </setting>
+            </group>
+            <group id="3" label="32108">
                 <setting id="file_resume_status" type="action" label="32098" help="32099">
                     <level>0</level>
                     <data>RunScript(script.mistuary.helper,action=file_resume_status)</data>
