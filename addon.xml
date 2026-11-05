@@ -17,14 +17,14 @@
     <extension point="xbmc.python.script" library="default.py">
         <provides>executable</provides>
     </extension>
-    <!-- 事件驱动的小服务：只做播放列表补全，设置默认关（关=立即返回）。
-         0.3.3 删除的是评分同步的常驻服务；这个服务不轮询、不写库。 -->
+    <!-- 事件驱动的小服务：只做播放列表补全，按目录默认开、按季/跨季默认关
+         （全关时立即返回）。0.3.3 删除的是评分同步的常驻服务；这个服务不轮询、不写库。 -->
     <extension point="xbmc.service" library="service.py"/>
     <extension point="xbmc.addon.metadata">
-        <summary lang="en_gb">Server-side search and Douban rating bridge for the Mistuary skin</summary>
-        <summary lang="zh_cn">Mistuary 皮肤的服务端搜索与豆瓣评分桥</summary>
-        <description lang="en_gb">Optional add-on. Search uses the Emby server, so Chinese titles, original titles, full pinyin and initials work like in the Emby app. Douban ratings are read from the StrmAssistant Emby plugin first, falling back to the public Douban API.</description>
-        <description lang="zh_cn">可选插件。搜索走 Emby 服务端，支持中文标题、原名、全拼和首字母；详情页豆瓣评分优先从 StrmAssistant 插件读取，失败再回退豆瓣公开接口。</description>
+        <summary lang="en_gb">Required helper for the Mistuary skin: server-side search and Douban ratings</summary>
+        <summary lang="zh_cn">Mistuary 皮肤的必需组件：服务端搜索与豆瓣评分</summary>
+        <description lang="en_gb">Required by the Mistuary skin (hard dependency). Search uses the Emby server, so Chinese titles, original titles, full pinyin and initials work like in the Emby app. Douban ratings are read from the StrmAssistant Emby plugin first, falling back to the public Douban API.</description>
+        <description lang="zh_cn">Mistuary 皮肤的必需组件（addon.xml 硬依赖）。搜索走 Emby 服务端，支持中文标题、原名、全拼和首字母；详情页豆瓣评分优先从 StrmAssistant 插件读取，失败再回退豆瓣公开接口。</description>
         <disclaimer lang="zh_cn">只在本地读取 Emby 插件的服务器配置，令牌不会写入日志或缓存。</disclaimer>
         <language></language>
         <platform>all</platform>

@@ -10,7 +10,7 @@
 ## 2. 发版前自检
 
 ```bash
-python -m unittest discover -s tests -p 'test_*.py'   # 当前 197 项
+python -m unittest discover -s tests -p 'test_*.py'   # 当前 211 项
 python -m compileall -q default.py lib
 ```
 
@@ -60,9 +60,13 @@ git ls-remote --tags origin | tail -5
 | 详情页豆瓣 | 0.2.0 |
 | action 目录收尾 | 0.2.2 |
 | 播放列表补全（同季 / 同目录） | 0.3.4 |
+| 跨季继续 | 0.3.5 |
+| 文件播放记录 | 0.3.7 |
+| 媒体库封面同步 | 0.3.9 |
 | 代表集标识 | 不适用（M3 暂缓） |
 
-皮肤只做 `AddonIsEnabled` 软探测，不比较版本；旧版插件不写新属性，皮肤自然隐藏。
+2026-11-05 起皮肤 `addon.xml` 声明硬依赖，未装插件不加载；运行时仍保留 `AddonIsEnabled`
+软探测用于隐藏入口，不比较版本。
 
 ## 6. 已发布
 
@@ -75,6 +79,8 @@ git ls-remote --tags origin | tail -5
 | 0.3.4 | 播放列表补全（含 0.3.3 的设置整理与搜索补齐） |
 | 0.3.5 | 播放列表自然排序/去重/跳过花絮；豆瓣无分可回退公开接口 |
 | 0.3.6 | 发布包补上 `service.py` |
+| 0.3.7 | 文件播放记录（10003 弹窗 + 焦点行圆环） |
+| 0.3.8 | 插件封面文字下移、去掉豆瓣 / 搜索那行 |
+| 0.3.9 | 媒体库封面同步；按目录补全默认开 |
 
-`0.3.6` 已发布，Release 由 CI 在 push 时自动创建；本地 `main` 的 0.3.7
-（文件播放记录）未发，升版本后按同样流程发。
+`0.3.9` 已发布，Release 由 CI 在 push 时自动创建。

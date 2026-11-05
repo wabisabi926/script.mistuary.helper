@@ -3,12 +3,12 @@
 > 本文是**插件与皮肤之间的接口约定**。改任何一方的调用方式前先改这里。
 > 皮肤仓库里的 `docs/helper-plugin-plan.md` 是本文的摘要，**以本文为准**。
 
-## 一、可选安装
+## 一、硬依赖
 
-插件是**可选**的。`addon.xml` 不写 `<import addon="script.mistuary.helper"/>`——
-写了就变成硬依赖，没装插件的用户整个皮肤加载失败。
+2026-11-05 起皮肤 `addon.xml` 声明 `<import addon="script.mistuary.helper" version="0.0.0"/>`，
+未安装或禁用时皮肤**不加载**。
 
-皮肤只做软探测：
+运行时仍保留软探测，用于插件在会话中被禁用后隐藏相关入口：
 
 ```xml
 <expression name="helper_ready">System.AddonIsEnabled(script.mistuary.helper)</expression>
@@ -182,9 +182,9 @@ Kodi 的 `<include condition="...">` 和容器的 `<content>` 都是**加载时�
 
 卸载后回退则是**立即**的——探测是每次渲染求值，不是缓存。
 
-## 八点五、皮肤助手页的设置桥（0.3.5；0.3.7 本地未发增加 FileResume）
+## 八点五、皮肤设置页的设置桥（0.3.5；0.3.7 增加 FileResume）
 
-皮肤的「皮肤助手」页不能可靠地直接读写别的 addon，因此由插件把主要开关写成
+皮肤设置页不能可靠地直接读写别的 addon，因此由插件把主要开关写成
 `Window(home)` 属性；皮肤只读属性、点击时回调：
 
 ```
@@ -198,12 +198,12 @@ RunScript(script.mistuary.helper,action=toggle_setting,key=douban_enabled)
 | `Mistuary.Helper.PlaylistSeason` | `playlist_completion_season` |
 | `Mistuary.Helper.PlaylistFolder` | `playlist_completion_folder` |
 | `Mistuary.Helper.PlaylistNextSeason` | `playlist_completion_next_season` |
-| `Mistuary.Helper.FileResume` | `file_resume`（0.3.7 本地未发） |
+| `Mistuary.Helper.FileResume` | `file_resume`（0.3.7） |
 
 属性值为 `"true"` / `"false"`；`toggle_setting` 只接受上表五个 key，未知 key 忽略。
-插件未启用时不写属性，皮肤对应行隐藏。
+插件未启用时不写属性；714 搜索开关靠 `helper_search_ready` 隐藏，其余行保持可见（可切换后再启用插件）。
 
-### 8.5.1 文件播放记录属性（0.3.7 本地未发）
+### 8.5.1 文件播放记录属性（0.3.7）
 
 插件在 `service.py` 里维护，皮肤只在文件管理器 10003 的聚焦行读取：
 
@@ -237,7 +237,7 @@ RunScript(script.mistuary.helper,action=toggle_setting,key=douban_enabled)
 - 保留：默认 90 天 / 5000 条，可在插件设置调整；启动时 + 每 6 小时清理；
   设置页提供查看条数、立即清理、清空全部（二次确认）。
 
-### 8.5.2 续播弹窗属性（0.3.7 本地未发）
+### 8.5.2 续播弹窗属性（0.3.7）
 
 helper 在打开 `Custom_1115_FileResume.xml` 前写 `Window(home)` 属性：
 
