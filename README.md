@@ -138,10 +138,14 @@ python -m unittest discover -s tests -p 'test_*.py'
 HTTP 全部 mock，不依赖网络、不依赖 Emby。本地调试：
 
 ```bash
-# 把仓库目录联接/复制到 Kodi 的 addons 目录
-# 改 *.py 不需要重启（每次调用重新加载）
-# 改 addon.xml / resources/ 需要重启
+python tools/sync_to_kodi.py            # 同步到 Kodi addons 目录，跑完打印版本号
+python tools/sync_to_kodi.py --dry-run  # 只看目标路径和文件数
 ```
+
+手工复制容易漏文件（2026-11-05 真机曾长期停在 0.3.6，仓库早已 0.3.7），统一走脚本。
+
+- 改 `*.py` 不需要重启（每次调用重新加载），但 **service 只在启动时拉起**，改完要禁用/启用一次插件或重启 Kodi
+- 改 `addon.xml` / `resources/` 需要重启
 
 文档在 [`docs/`](docs/)：
 
