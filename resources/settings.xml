@@ -34,6 +34,11 @@
                     <data>RunPlugin(plugin://script.mistuary.helper/?action=test_connection)</data>
                     <control type="button" format="action"/>
                 </setting>
+                <setting id="library_icons_sync" type="action" label="32150" help="32151">
+                    <level>0</level>
+                    <data>RunPlugin(plugin://script.mistuary.helper/?action=library_icons_sync)</data>
+                    <control type="button" format="action"/>
+                </setting>
             </group>
         </category>
 

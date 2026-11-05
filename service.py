@@ -7,6 +7,7 @@
 
 import os
 import sys
+import threading
 
 import xbmc
 import xbmcaddon
@@ -78,8 +79,29 @@ class HelperService(xbmc.Monitor):
             log.error("file resume clean hook failed: %s" % exc)
 
 
+def _sync_library_icons_once():
+    """首次启动（没有 manifest）静默同步一次；之后只在设置页手动触发。"""
+    try:
+        from lib import config, library_icons
+
+        if library_icons.has_manifest():
+            return
+        settings = config.read_settings()
+        server = config.find_server(settings.get("server_id", ""))
+        if server is None:
+            return
+        library_icons.sync(server)
+    except Exception as exc:  # noqa: BLE001 - 后台线程不能影响服务
+        log.error("library icons startup sync failed: %s" % exc)
+
+
 if __name__ == "__main__":
     log.info("service started")
+    threading.Thread(
+        target=_sync_library_icons_once,
+        name="mistuary-library-icons",
+        daemon=True,
+    ).start()
     profile = xbmcvfs.translatePath(
         "special://profile/addon_data/script.mistuary.helper"
     )

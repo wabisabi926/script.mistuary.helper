@@ -327,3 +327,19 @@ msgstr "Off by default. Use only for fixed HTTP/WebDAV sources; tokenized links 
 msgctxt "#32108"
 msgid "Maintenance"
 msgstr "Maintenance"
+
+msgctxt "#32150"
+msgid "Sync library covers"
+msgstr "Sync library covers"
+
+msgctxt "#32151"
+msgid "Save Emby library covers locally so the home screen can show them by library name"
+msgstr "Save Emby library covers locally so the home screen can show them by library name"
+
+msgctxt "#32152"
+msgid "Library covers updated: {0} saved, {1} skipped, {2} failed"
+msgstr "Library covers updated: {0} saved, {1} skipped, {2} failed"
+
+msgctxt "#32153"
+msgid "Library cover sync failed ({0})"
+msgstr "Library cover sync failed ({0})"

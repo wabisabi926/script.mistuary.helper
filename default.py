@@ -74,6 +74,13 @@ def main():
         kodi.end_directory(HANDLE)
         return
 
+    if req.action == "library_icons_sync":
+        from lib import library_icons
+
+        library_icons.run_action()
+        kodi.end_directory(HANDLE)
+        return
+
     if req.action == "settings_snapshot":
         from lib import skin_bridge
 

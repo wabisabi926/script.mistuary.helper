@@ -44,6 +44,7 @@
 | 播放地址 | ✅ 实机通过 | `mode=play` 直连 Emby 插件，2026-10-30 验收；直链兜底不需要 |
 | 播放列表补全 | ✅ 0.3.4 | 两个独立开关：媒体库剧集按季补全 / 文件夹播放按目录补全（视频与音乐）；默认关，只加不播 |
 | 文件播放记录 | ✅ 0.3.7 本地未发 | 只记文件管理器 10003：弹窗 + 焦点行圆环；不写 Kodi 原生续播点；账本 `resume.db`，默认开 |
+| 媒体库封面 | ✅ 本地未发 | 从 Emby `/Users/{uid}/Views` 同步 Primary 图到 `library_icons/<库名>.png`，皮肤首页按库名显示；首次启动自动一次，之后手动 |
 
 ## 2.5 文件播放记录（0.3.7 已发）
 
@@ -96,6 +97,21 @@
   非源路径返回 `Invalid params`（2026-11-04 实测）。
 - `Files.SetFileDetails`（写续播点）本版本**不再使用**；原生续播点只读回退。
 - 原生回退只对源内文件可靠；非源路径以 `resume.db` 账本为准。
+
+## 2.6 媒体库封面同步（本地未发）
+
+E4K 不导出库封面：它只把封面存成 `image://emby@...` 地址，Kodi 的 tag 列表项
+也不带 art，皮肤在 XML 层拿不到。所以由本插件直接读 Emby 的 `/Users/{uid}/Views`，
+把每个库的 Primary 图下载到 `addon_data/script.mistuary.helper/library_icons/<库名>.png`，
+没设封面的库写 1×1 透明 PNG 占位（皮肤那层永远能加载，不会每次渲染报错）。
+皮肤按 `ListItem.Label` 拼文件名。
+
+- 文件名只替换 `\/:*?"<>|` 和控制字符，其余保持库名原样
+- `manifest.json` 记录 `id + tag`，没变就跳过；下载失败保留旧文件，下次再试
+- 请求带 `format=png`（整条链路统一 PNG，缺封面才能写透明占位）
+- manifest v2：v1（`.jpg`）会被当成不存在，启动时自动重同步一次并清掉旧 jpg
+- manifest 不写 token；首次启动（没有有效 manifest）后台静默同步一次
+- 手动入口：设置 → Emby 服务器 → 同步媒体库封面；皮肤「界面」页也有按钮
 
 ## 3. 已修复的两个 Kodi 偶发问题
 
@@ -203,12 +219,14 @@ push 到 `main` 且版本号变化时 CI 自动打包。不要手工打 zip。
 | `lib/douban.py` | 豆瓣双通道、缓存、窗口属性 |
 | `lib/kodi.py` | ListItem、窗口属性、目录收尾 |
 | `lib/cache.py` | 磁盘缓存（不含 token） |
+| `lib/library_icons.py` | 媒体库封面同步：Views → 本地 PNG（缺封面写透明占位）+ manifest v2 |
 | `lib/log.py` / `lib/i18n.py` | 日志 / 本地化 |
-| `tests/` | 174 项单测，HTTP 全 mock |
+| `tests/` | 211 项单测，HTTP 全 mock |
 
 ## 8. 安全与隐私
 
 - 只读 Emby 插件的 `servers_*.json`，不修改。
 - 不写 Kodi 媒体库、不写皮肤设置。
 - 缓存只存评分/搜索结果和 `image_tag`，不存完整图片 URL / token。
+- 库封面 manifest 只存库 id / tag / 文件名，不存 token。
 - 日志只记 ServerId 和 HTTP 状态码，不记 token。
