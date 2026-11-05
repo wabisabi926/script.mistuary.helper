@@ -81,7 +81,7 @@
                 </setting>
                 <setting id="playlist_completion_folder" type="boolean" label="32064" help="32065">
                     <level>0</level>
-                    <default>false</default>
+                    <default>true</default>
                     <control type="toggle"/>
                 </setting>
             </group>

@@ -40,7 +40,7 @@ DEFAULTS = {
     "cache_ttl": 300,
     "debug_log": False,
     "playlist_completion_season": False,
-    "playlist_completion_folder": False,
+    "playlist_completion_folder": True,
     "playlist_completion_next_season": False,
 }
 
