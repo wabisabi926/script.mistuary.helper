@@ -85,14 +85,14 @@ def build_fanart(base_path: str, font_path: str) -> Image.Image:
     canvas = gradient_from(base_path, (FANART_W, FANART_H)).convert("RGBA")
     draw = ImageDraw.Draw(canvas)
 
-    title_font = ImageFont.truetype(font_path, 66)
-    sub_font = ImageFont.truetype(font_path, 38)
-    note_font = ImageFont.truetype(font_path, 26)
+    title_font = ImageFont.truetype(font_path, 60)
+    sub_font = ImageFont.truetype(font_path, 34)
 
+    # 文字压在面板下沿（940）之外。插件信息弹窗的面板占 240..1680 × 140..940，
+    # 烧在面板范围内的字会透过半透明面板，和弹窗正文叠在一起（2026-11-05）。
     left = 120
-    draw_text(draw, (left, 588), "Mistuary Helper", title_font, (255, 255, 255, 255))
-    draw_text(draw, (left + 4, 682), "雾 汐 · 助手", sub_font, (255, 255, 255, 220))
-    draw_text(draw, (left + 4, 744), "豆瓣评分 · 服务端搜索", note_font, (255, 255, 255, 150))
+    draw_text(draw, (left, 952), "Mistuary Helper", title_font, (255, 255, 255, 255))
+    draw_text(draw, (left + 4, 1026), "雾 汐 · 助手", sub_font, (255, 255, 255, 215))
     return canvas
 
 
