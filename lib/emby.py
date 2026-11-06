@@ -152,6 +152,7 @@ def normalize(raw: dict) -> dict:
         "position_ticks": user_data.get("PlaybackPositionTicks") or 0,
         "imdb": provider_ids.get("Imdb") or "",
         "tmdb": provider_ids.get("Tmdb") or "",
+        "tvdb": provider_ids.get("Tvdb") or "",
         # 只保留渲染需要的几项，MediaStreams 原始结构不往外传
         "video": {
             "codec": (video_stream.get("Codec") or "").lower(),
@@ -409,7 +410,21 @@ def render_search(handle: int, base_url: str, req) -> bool:
         kodi.add_notice(handle, base_url, _human_error(exc))
         return True
 
+    unsynced = 0
+
     for item in items:
+        if item["is_folder"]:
+            # 剧集一律跳 Kodi 媒体库，不走 Emby 插件的浏览接口：
+            # 各分支对 mode=browse 的支持并不一致，媒体库路径则是 Kodi 原生契约。
+            dbid = kodi.library_id_by_provider("tvshows", item["name"],
+                                               item.get("tmdb", ""), item.get("tvdb", ""))
+            if not dbid:
+                unsynced += 1
+                continue
+            target = "videodb://tvshows/titles/%d/" % dbid
+        else:
+            target = play_url(server, item["id"])
+
         list_item = xbmcgui.ListItem(label=item["name"], offscreen=True)
         kodi.apply_video_info(list_item, item)
         art = {}
@@ -423,10 +438,11 @@ def render_search(handle: int, base_url: str, req) -> bool:
         if art:
             list_item.setArt(art)
 
-        target = play_url(server, item["id"]) if not item["is_folder"] else \
-            "plugin://plugin.service.emby-next-gen/?mode=browse&id=%s&server=%s" % (
-                item["id"], server.server_id)
         xbmcplugin.addDirectoryItem(handle, target, list_item, isFolder=item["is_folder"])
+
+    if unsynced:
+        # 未同步的剧集在本地库里没有对应条目，进不去也播不了，直接说明比留空白页好
+        kodi.add_notice(handle, base_url, i18n.t(32154, unsynced))
 
     # 分页：标题结果这一页满了就再给一条「加载更多」；并入的额外条目不参与 offset 计算
     if title_count >= settings.get("page_size", 100):

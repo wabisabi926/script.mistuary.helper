@@ -343,3 +343,7 @@ msgstr "Library covers updated: {0} saved, {1} skipped, {2} failed"
 msgctxt "#32153"
 msgid "Library cover sync failed ({0})"
 msgstr "Library cover sync failed ({0})"
+
+msgctxt "#32154"
+msgid "{0} show(s) are not synced to the Kodi library and were hidden"
+msgstr "{0} show(s) are not synced to the Kodi library and were hidden"

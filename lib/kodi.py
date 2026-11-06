@@ -204,6 +204,53 @@ def video_items(kind: str) -> list:
     return items
 
 
+def library_id_by_provider(kind: str, title: str, tmdb="", tvdb="") -> int:
+    """按标题在 Kodi 库里定位条目，再用 tmdb/tvdb 校验，返回 Kodi 内部 id。
+
+    只服务「搜索结果点进去」这一条路径：标题过滤通常只命中几条，
+    比 `video_items()` 的全库枚举便宜得多。查不到返回 0，不抛异常。
+    """
+    spec = VIDEO_LIBRARY.get(kind)
+    if not spec or not title:
+        return 0
+
+    method, key, id_field = spec
+    try:
+        import json
+        import xbmc
+
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": method,
+            "params": {
+                "filter": {"field": "title", "operator": "is", "value": title},
+                "properties": ["uniqueid", "title"],
+                "limits": {"start": 0, "end": 50},
+            },
+        }
+        raw = xbmc.executeJSONRPC(json.dumps(payload))
+        rows = (((json.loads(raw).get("result") or {}).get(key)) or [])
+    except Exception:  # noqa: BLE001 - Kodi 不可用/库为空都按未命中处理
+        return 0
+
+    tmdb = str(tmdb or "").strip()
+    tvdb = str(tvdb or "").strip()
+
+    for row in rows:
+        uniqueid = row.get("uniqueid") or {}
+        if tmdb and str(uniqueid.get("tmdb") or "").strip() == tmdb:
+            return row.get(id_field) or 0
+        if tvdb and str(uniqueid.get("tvdb") or "").strip() == tvdb:
+            return row.get(id_field) or 0
+
+    # 两边都没有 ProviderId 时无从校验，只有唯一命中才认
+    if not tmdb and not tvdb and len(rows) == 1:
+        return rows[0].get(id_field) or 0
+
+    return 0
+
+
 def database_path(prefix: str = "MyVideos") -> str:
     """返回版本号最大的 `<prefix><N>.db` 路径；找不到返回空串。"""
     try:
