@@ -12,26 +12,23 @@
              皮肤容器的 Content(movies) 判断会失效。 -->
         <provides>video</provides>
     </extension>
-    <!-- 同时声明 script：皮肤的 RunScript(action=rating) 走脚本模式，
+    <!-- 同时声明 script：皮肤的 RunScript 动作（评分、设置桥、记录维护）走脚本模式，
          否则 Kodi 会警告 "RunScript called for a non-script addon"。 -->
     <extension point="xbmc.python.script" library="default.py">
         <provides>executable</provides>
     </extension>
-    <!-- 事件驱动的小服务：只做播放列表补全，按目录默认开、按季/跨季默认关
-         （全关时立即返回）。0.3.3 删除的是评分同步的常驻服务；这个服务不轮询、不写库。 -->
+    <!-- 常驻服务：播放列表补全 + 文件播放记录。
+         10003 焦点轮询只查内存，进度写 resume.db；不写 MyVideos/原生续播点。 -->
     <extension point="xbmc.service" library="service.py"/>
     <extension point="xbmc.addon.metadata">
-        <summary lang="en_gb">Required helper for the Mistuary skin: server-side search and Douban ratings</summary>
-        <summary lang="zh_cn">Mistuary 皮肤的必需组件：服务端搜索与豆瓣评分</summary>
-        <description lang="en_gb">Required by the Mistuary skin (hard dependency). Search uses the Emby server, so Chinese titles, original titles, full pinyin and initials work like in the Emby app. Douban ratings are read from the StrmAssistant Emby plugin first, falling back to the public Douban API.</description>
-        <description lang="zh_cn">Mistuary 皮肤的必需组件（addon.xml 硬依赖）。搜索走 Emby 服务端，支持中文标题、原名、全拼和首字母；详情页豆瓣评分优先从 StrmAssistant 插件读取，失败再回退豆瓣公开接口。</description>
+        <summary lang="en_gb">Required by the Mistuary skin: server-side search, Douban ratings, playlist completion, file resume and library covers</summary>
+        <summary lang="zh_cn">Mistuary 皮肤的必需组件：服务端搜索、豆瓣评分、播放列表补全、文件播放记录与媒体库封面</summary>
+        <description lang="en_gb">Required by the Mistuary skin (hard dependency). Search uses the Emby server, so Chinese titles, original titles, full pinyin and initials work like in the Emby app. Douban ratings are read from the StrmAssistant Emby plugin first, falling back to the public Douban API. Playlists are completed by folder, season or next season. File playback resume only records the file manager (10003) and never writes Kodi's native resume point. Library covers are synced locally for the home screen.</description>
+        <description lang="zh_cn">Mistuary 皮肤的必需组件（addon.xml 硬依赖）。搜索走 Emby 服务端，支持中文标题、原名、全拼和首字母；详情页豆瓣评分优先从 StrmAssistant 插件读取，失败再回退豆瓣公开接口；播放列表按目录、按季或跨季补全；文件播放记录只记文件管理器（10003）的进度，不写 Kodi 原生续播点；媒体库封面同步到本地供首页使用。</description>
         <disclaimer lang="zh_cn">只在本地读取 Emby 插件的服务器配置，令牌不会写入日志或缓存。</disclaimer>
         <language></language>
         <platform>all</platform>
         <license>GPL-3.0-only</license>
-        <forum></forum>
-        <website></website>
-        <source></source>
         <!-- 图标 / 背景由 tools/gen_assets.py 生成到 resources/。
              <assets> 必须放在 xbmc.addon.metadata 这个 extension 内部 ——
              放到 extension 外面 Kodi 不解析，只能靠 addon 根目录的同名
