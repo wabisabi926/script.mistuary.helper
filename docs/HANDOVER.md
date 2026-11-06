@@ -1,4 +1,4 @@
-# 交接说明（Mistuary Helper 0.3.9 已发布）
+# 交接说明（Mistuary Helper 0.3.11 已发布）
 
 > 接手先读这份，再看 `contract.md`（皮肤接口）和 `roadmap.md`（还剩什么）。
 > 本文只讲现状、已知问题、验证入口和发版，不讲历史演进。
@@ -6,9 +6,10 @@
 ## 1. 一句话现状
 
 `script.mistuary.helper` 是 Mistuary 皮肤的**必需**配套插件（皮肤 `addon.xml` 硬依赖），
-当前发布 **0.3.9**，211 项单测全绿，已发布 `v0.2.0` / `v0.2.1` / `v0.2.2` / `v0.3.2` / `v0.3.4` / `v0.3.5` /
-`v0.3.6` / `v0.3.7` / `v0.3.8`（`v0.3.6` 只修发布包漏带 `service.py`）。
-文件播放记录随 **0.3.7** 发布，见 §2.5；0.3.8 只调插件封面文字；0.3.9 加媒体库封面同步与按目录补全默认开。
+当前发布 **0.3.11**，229 项单测全绿，已发布 `v0.2.0` / `v0.2.1` / `v0.2.2` / `v0.3.2` / `v0.3.4` / `v0.3.5` /
+`v0.3.6` / `v0.3.7` / `v0.3.8` / `v0.3.10` / `v0.3.11`（`v0.3.6` 只修发布包漏带 `service.py`）。
+文件播放记录随 **0.3.7** 发布，见 §2.5；0.3.8 只调插件封面文字；0.3.9 加媒体库封面同步与按目录补全默认开；
+0.3.10 搜索剧集改走 Kodi 媒体库；0.3.11 让库里没有的剧集可直接浏览（§2.7）。
 搜索和豆瓣评分主路径已接在皮肤 `main`，**M1c 已于 2026-10-30 实机验收通过**（含播放）；
 搜索结果的**真海报与真背景图**已于 2026-10-30 修好（`c4ac966`），实机确认正常。
 
@@ -39,6 +40,8 @@
 | 豆瓣评分 | ✅ | IMDb 优先，dbid 反查，标题 + 年份兜底；7 天缓存 |
 | action 模式 | ✅ 0.2.2 | `plugin://...?action=...` 会补 `endOfDirectory`；`RunScript` handle=-1 不调 |
 | 演员 / 导演 / 类型 | ✅ 0.3.3 | 仅非 ASCII、≥2 字；纯字母按标题处理 |
+| 搜索：剧集跳转 | ✅ 0.3.10 | 按标题 + tmdb/tvdb 在 Kodi 库里定位，跳 `videodb://tvshows/titles/<id>/` |
+| 搜索：未同步剧集 | ✅ 0.3.11 | 库里没有的剧集进入插件自己的季/集列表；子列表一层、缓存 5 分钟；播放仍走 `mode=play` |
 | 别名 / 分词 | ❌ | 未实现 |
 | 代表集技术标识 | ❌ | M3 明确不做，插件侧已移除空壳 |
 | 播放地址 | ✅ 实机通过 | `mode=play` 直连 Emby 插件，2026-10-30 验收；直链兜底不需要 |
@@ -77,7 +80,7 @@
   120 秒内路径不同的自动连播不弹窗，同一路径重开仍弹窗。窗口缺失时回退原生 yes/no（No = 继续播放）。
 - 开关：`file_resume`（默认开），皮肤设置「播放」页可切；`skin_bridge` 暴露
   `Mistuary.Helper.FileResume`。
-- 单测：`tests/test_file_resume.py` 全覆盖；全仓共 211 项。
+- 单测：`tests/test_file_resume.py` 全覆盖；全仓共 229 项。
 - **实机验证（2026-11-04）**：`.strm` 播放到 5:00 停止后账本写入 300s；
   再次播放 1.0 秒弹出 1115 紧凑弹窗，默认「继续播放」，回车跳到 5:19；
   10003 焦点行属性 `HasResume / Percent / PercentKey` = true / 7 / 007。
@@ -112,6 +115,16 @@ E4K 不导出库封面：它只把封面存成 `image://emby@...` 地址，Kodi 
 - manifest v2：v1（`.jpg`）会被当成不存在，启动时自动重同步一次并清掉旧 jpg
 - manifest 不写 token；首次启动（没有有效 manifest）后台静默同步一次
 - 手动入口：设置 → Emby 服务器 → 同步媒体库封面；皮肤「界面」页也有按钮
+
+## 2.7 未同步内容浏览（0.3.10 / 0.3.11）
+
+- 0.3.10：搜索里点剧集不再走 Emby 插件的 `mode=browse`（部分分支已移除该接口，会打开空列表）；
+  改为按标题 + tmdb/tvdb 在 Kodi 库里定位，跳 `videodb://tvshows/titles/<id>/`。
+- 0.3.11：库里没有的剧集不再隐藏，搜索结果进入插件自己的季/集列表；
+  子项列表只拉一层（`ParentId` + `Limit 500`），结果缓存 5 分钟；
+  播放仍走 Emby 插件的 `mode=play`，由它从服务端取数据。
+- 剧集 / 季 / 合集 / 专辑统一按“不可播放”处理，不再被当成视频直接播。
+- 搜索页签仍只有电影 / 剧集，不直接返回单集。
 
 ## 3. 已修复的两个 Kodi 偶发问题
 
@@ -191,7 +204,7 @@ Kodi 日志报 `CGUIMediaWindow::GetDirectory(...) failed`。
 
 ```bash
 cd D:/下载/AI/script.mistuary.helper
-python -m unittest discover -s tests -p 'test_*.py'   # 211 项
+python -m unittest discover -s tests -p 'test_*.py'   # 229 项
 python -m compileall -q default.py lib
 ```
 
@@ -215,13 +228,13 @@ push 到 `main` 且版本号变化时 CI 自动打包。不要手工打 zip。
 | `default.py` | 入口：解析 argv、分发、目录收尾 |
 | `lib/router.py` | 参数解析；`query` 最后、过滤 `resume:` 元参数 |
 | `lib/config.py` | 读设置 + 从 Emby 插件配置发现服务器 |
-| `lib/emby.py` | Emby 搜索、字段映射、播放地址 |
+| `lib/emby.py` | Emby 搜索、字段映射、播放地址、未同步内容 browse 列表 |
 | `lib/douban.py` | 豆瓣双通道、缓存、窗口属性 |
-| `lib/kodi.py` | ListItem、窗口属性、目录收尾 |
+| `lib/kodi.py` | ListItem、窗口属性、目录收尾、库内条目定位 |
 | `lib/cache.py` | 磁盘缓存（不含 token） |
 | `lib/library_icons.py` | 媒体库封面同步：Views → 本地 PNG（缺封面写透明占位）+ manifest v2 |
 | `lib/log.py` / `lib/i18n.py` | 日志 / 本地化 |
-| `tests/` | 211 项单测，HTTP 全 mock |
+| `tests/` | 229 项单测，HTTP 全 mock |
 
 ## 8. 安全与隐私
 

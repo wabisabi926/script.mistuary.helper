@@ -10,7 +10,7 @@
 ## 2. 发版前自检
 
 ```bash
-python -m unittest discover -s tests -p 'test_*.py'   # 当前 211 项
+python -m unittest discover -s tests -p 'test_*.py'   # 当前 229 项
 python -m compileall -q default.py lib
 ```
 
@@ -63,6 +63,8 @@ git ls-remote --tags origin | tail -5
 | 跨季继续 | 0.3.5 |
 | 文件播放记录 | 0.3.7 |
 | 媒体库封面同步 | 0.3.9 |
+| 搜索剧集跳 Kodi 媒体库 | 0.3.10 |
+| 未同步剧集浏览 | 0.3.11 |
 | 代表集标识 | 不适用（M3 暂缓） |
 
 2026-11-05 起皮肤 `addon.xml` 声明硬依赖，未装插件不加载；运行时仍保留 `AddonIsEnabled`
@@ -82,5 +84,7 @@ git ls-remote --tags origin | tail -5
 | 0.3.7 | 文件播放记录（10003 弹窗 + 焦点行圆环） |
 | 0.3.8 | 插件封面文字下移、去掉豆瓣 / 搜索那行 |
 | 0.3.9 | 媒体库封面同步；按目录补全默认开 |
+| 0.3.10 | 搜索剧集改走 Kodi 媒体库 |
+| 0.3.11 | 未同步剧集进入插件自己的季/集列表 |
 
-`0.3.9` 已发布，Release 由 CI 在 push 时自动创建。
+`0.3.11` 已发布，Release 由 CI 在 push 时自动创建。

@@ -21,15 +21,15 @@ script.mistuary.helper/
 │   ├── cache.py               磁盘缓存（json + mtime，原子写）
 │   ├── log.py                 日志（惰性 import xbmc，绝不打印 token）
 │   ├── i18n.py                本地化（带中文兜底）
-│   ├── emby.py                Emby 客户端 + 结果映射 + 渲染
-│   ├── kodi.py                ListItem 构造、窗口属性桥
+│   ├── emby.py                Emby 客户端 + 结果映射 + 渲染 + 未同步内容 browse 列表
+│   ├── kodi.py                ListItem 构造、窗口属性桥、库内条目定位
 │   ├── douban.py              M2：豆瓣取分
 │   ├── playlist_sync.py       播放列表补全（事件驱动）
 │   └── file_resume.py         文件播放记录：SQLite 账本（仅 10003）
 ├── resources/
 │   ├── settings.xml
 │   └── language/{en_gb,zh_cn}/strings.po
-└── tests/                     10 个文件，211 项
+└── tests/                     11 个文件，229 项
 ```
 
 ## 数据流
