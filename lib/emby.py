@@ -41,6 +41,9 @@ FIELDS = ",".join([
 
 TICKS_PER_MINUTE = 6000000  # Emby 的 RunTimeTicks 是 100ns 单位
 
+# 这些类型本身不可播放，点进去要展开子项
+FOLDER_TYPES = ("Series", "Season", "BoxSet", "Folder", "MusicAlbum", "MusicArtist")
+
 
 class EmbyError(Exception):
     """带状态码的错误，调用方据此决定给用户看什么。"""
@@ -139,7 +142,7 @@ def normalize(raw: dict) -> dict:
         "sort_name": raw.get("SortName") or "",
         "original_title": raw.get("OriginalTitle") or "",
         "type": item_type,
-        "is_folder": item_type == "Series",
+        "is_folder": item_type in FOLDER_TYPES,
         "year": raw.get("ProductionYear") or 0,
         "rating": raw.get("CommunityRating") or 0,
         "critic_rating": raw.get("CriticRating") or 0,
@@ -317,6 +320,46 @@ RATINGS_BY_IMDB_PATH = "emby/Douban/RatingsByImdb"
 RATINGS_BATCH = 80
 
 
+CHILDREN_LIMIT = 500
+
+
+def children(server, item_id: str, ttl: int = 300) -> list[dict]:
+    """列出一个条目的直接子项：剧 → 季、季 → 集、合集 → 影片。
+
+    只做一层、不分页：单部剧的季/集数量有限，500 条足够覆盖。
+    失败抛 EmbyError，由 render_browse 翻译成人话。
+    """
+    if not item_id:
+        return []
+
+    key = cache.make_key("children_v1", server.server_id, item_id)
+    cached = cache.get(key, ttl)
+    if cached is not None:
+        log.debug("children cache hit: %s" % item_id)
+        return cached
+
+    url = http.build_url(server.base_url, "emby/Items", {
+        "ParentId": item_id,
+        "Recursive": "false",
+        "Fields": FIELDS,
+        "ImageTypeLimit": 1,
+        "EnableImageTypes": "Primary,Backdrop",
+        "SortBy": "ParentIndexNumber,IndexNumber,SortName",
+        "Limit": CHILDREN_LIMIT,
+        "UserId": server.user_id,
+    })
+
+    payload, resp = http.get_json(url, headers={"X-Emby-Token": server.token})
+    if payload is None:
+        log.error("children failed: status=%s error=%s" % (resp.status, resp.error))
+        raise EmbyError(resp.error or "request failed", resp.status)
+
+    items = [normalize(item) for item in (payload.get("Items") or []) if item.get("Id")]
+    cache.put(key, items)
+    log.debug("children %s -> %d items" % (item_id, len(items)))
+    return items
+
+
 def test_connection(server) -> tuple:
     """探测服务器是否可达、令牌是否有效。返回 (ok, 说明)。"""
     url = http.build_url(server.base_url, "emby/System/Info")
@@ -384,12 +427,37 @@ def _human_error(exc: EmbyError) -> str:
     return i18n.t(32025, exc.status)
 
 
+def _list_item(server, item):
+    """把规范化后的条目变成 ListItem（海报、背景、技术标识）。
+
+    搜索和浏览两条路径共用：字段来源一致，样式才不会各走各的。
+    """
+    import xbmcgui
+
+    from lib import kodi
+
+    list_item = xbmcgui.ListItem(label=item["name"], offscreen=True)
+    kodi.apply_video_info(list_item, item)
+
+    art = {}
+    poster = image_url(server, item["id"], item["image_tag"])
+    if poster:
+        art["poster"] = poster
+        art["thumb"] = poster
+    backdrop = backdrop_url(server, item["id"], item.get("backdrop_tag", ""))
+    if backdrop:
+        art["fanart"] = backdrop
+    if art:
+        list_item.setArt(art)
+    return list_item
+
+
 def render_search(handle: int, base_url: str, req) -> bool:
     """搜索模式的渲染入口。返回 True 表示目录可以正常结束。"""
     import xbmcgui
     import xbmcplugin
 
-    from lib import kodi
+    from lib import kodi, router
 
     settings = config.read_settings()
     server = config.find_server(settings.get("server_id", ""))
@@ -410,44 +478,22 @@ def render_search(handle: int, base_url: str, req) -> bool:
         kodi.add_notice(handle, base_url, _human_error(exc))
         return True
 
-    unsynced = 0
-
     for item in items:
         if item["is_folder"]:
-            # 剧集一律跳 Kodi 媒体库，不走 Emby 插件的浏览接口：
-            # 各分支对 mode=browse 的支持并不一致，媒体库路径则是 Kodi 原生契约。
+            # 已同步的剧集直接进 Kodi 库：有观看状态、版本和字幕设置。
+            # 库里的落点走 Kodi 原生路径，不依赖任何 Emby 插件的浏览接口。
             dbid = kodi.library_id_by_provider("tvshows", item["name"],
                                                item.get("tmdb", ""), item.get("tvdb", ""))
-            if not dbid:
-                unsynced += 1
-                continue
-            target = "videodb://tvshows/titles/%d/" % dbid
+            target = "videodb://tvshows/titles/%d/" % dbid if dbid \
+                else router.build_browse_url(base_url, item["id"])
         else:
             target = play_url(server, item["id"])
 
-        list_item = xbmcgui.ListItem(label=item["name"], offscreen=True)
-        kodi.apply_video_info(list_item, item)
-        art = {}
-        poster = image_url(server, item["id"], item["image_tag"])
-        if poster:
-            art["poster"] = poster
-            art["thumb"] = poster
-        backdrop = backdrop_url(server, item["id"], item.get("backdrop_tag", ""))
-        if backdrop:
-            art["fanart"] = backdrop
-        if art:
-            list_item.setArt(art)
-
-        xbmcplugin.addDirectoryItem(handle, target, list_item, isFolder=item["is_folder"])
-
-    if unsynced:
-        # 未同步的剧集在本地库里没有对应条目，进不去也播不了，直接说明比留空白页好
-        kodi.add_notice(handle, base_url, i18n.t(32154, unsynced))
+        xbmcplugin.addDirectoryItem(handle, target, _list_item(server, item),
+                                    isFolder=item["is_folder"])
 
     # 分页：标题结果这一页满了就再给一条「加载更多」；并入的额外条目不参与 offset 计算
     if title_count >= settings.get("page_size", 100):
-        from lib import router
-
         more = xbmcgui.ListItem(label=i18n.t(32027), offscreen=True)
         xbmcplugin.addDirectoryItem(
             handle,
@@ -459,4 +505,42 @@ def render_search(handle: int, base_url: str, req) -> bool:
 
     if not items:
         kodi.add_notice(handle, base_url, i18n.t(32026, req.query), playable=False)
+    return True
+
+
+def render_browse(handle: int, base_url: str, req) -> bool:
+    """浏览模式的渲染入口：列出某个 Emby 条目的子项。
+
+    只服务「搜索命中但没同步进库」的内容：已同步的走 Kodi 媒体库，
+    不必经过这里。播放仍交给 Emby 插件的 mode=play，未同步条目它会
+    自己从服务端取数据。
+    """
+    import xbmcplugin
+
+    from lib import kodi, router
+
+    settings = config.read_settings()
+    server = config.find_server(settings.get("server_id", ""))
+    if server is None:
+        kodi.add_notice(handle, base_url, i18n.t(32021))
+        return True
+
+    if not req.item_id:
+        kodi.add_notice(handle, base_url, i18n.t(32022))
+        return True
+
+    try:
+        items = children(server, req.item_id, ttl=settings.get("cache_ttl", 300))
+    except EmbyError as exc:
+        kodi.add_notice(handle, base_url, _human_error(exc))
+        return True
+
+    for item in items:
+        target = router.build_browse_url(base_url, item["id"]) if item["is_folder"] \
+            else play_url(server, item["id"])
+        xbmcplugin.addDirectoryItem(handle, target, _list_item(server, item),
+                                    isFolder=item["is_folder"])
+
+    if not items:
+        kodi.add_notice(handle, base_url, i18n.t(32155), playable=False)
     return True

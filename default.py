@@ -40,6 +40,14 @@ def main():
         xbmcplugin.endOfDirectory(HANDLE, succeeded=True, cacheToDisc=False)
         return
 
+    if req.mode == "browse":
+        # 未同步内容的季/集列表：搜索命中库里没有的条目时才走这里。
+        from lib import emby
+
+        emby.render_browse(HANDLE, BASE_URL, req)
+        xbmcplugin.endOfDirectory(HANDLE, succeeded=True, cacheToDisc=False)
+        return
+
     if req.action == "rating":
         # M2：写豆瓣评分窗口属性。
         from lib import douban

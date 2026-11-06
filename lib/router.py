@@ -22,10 +22,10 @@ class Request(object):
     """一次调用的意图。字段少而明确，避免用 dict 到处传。"""
 
     __slots__ = ("mode", "action", "type", "query", "dbid", "imdb", "tmdb",
-                 "title", "year", "key", "offset", "raw")
+                 "title", "year", "key", "offset", "item_id", "raw")
 
     def __init__(self, mode="", action="", type="", query="", dbid="", imdb="",
-                 tmdb="", title="", year="", key="", offset=0, raw=""):
+                 tmdb="", title="", year="", key="", offset=0, item_id="", raw=""):
         self.mode = mode
         self.action = action
         self.type = type
@@ -37,6 +37,7 @@ class Request(object):
         self.year = year
         self.key = key
         self.offset = offset
+        self.item_id = item_id
         self.raw = raw
 
     def __repr__(self):
@@ -118,6 +119,7 @@ def parse(raw: str) -> Request:
         year=one("year"),
         key=one("key"),
         offset=max(0, offset),
+        item_id=one("id"),
         raw=raw,
     )
 
@@ -129,3 +131,8 @@ def build_search_url(base_url: str, media_type: str, query: str, offset: int = 0
     """
     url = "%s?mode=search&type=%s&offset=%d&query=%s" % (base_url, media_type, offset, query)
     return url
+
+
+def build_browse_url(base_url: str, item_id: str) -> str:
+    """拼一个浏览 URL，给「未同步内容的季/集列表」用。"""
+    return "%s?mode=browse&id=%s" % (base_url, item_id)
