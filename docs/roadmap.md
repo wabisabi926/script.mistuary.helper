@@ -339,12 +339,12 @@ RunScript(script.mistuary.helper,action=rating,dbid=…,imdb=…,tmdb=…)
    一页最多 100 条就是 100 次请求，而搜索结果卡片本来也不显示技术标识。**收益为零、成本很高**，
    `techflags.py` 保持空壳，文档里改成「暂缓」。
 4. **插件远端仓库已建**：`wabisabi926/script.mistuary.helper`，公开、GPL-3.0；
-   action 已钉 SHA，Release 由 CI 自动创建，当前发布 0.3.11。
+   action 已钉 SHA，Release 由 CI 自动创建，当前发布 0.4.0。
 
 ### 当前主线
 
 **M0–M7 全部完成**（M1d 仅非 ASCII + 严格前缀），M3 / M4 明确不做。
-插件 **0.3.11** 已发布；皮肤 **2.1.0** 已发布。
+插件 **0.4.0** 已发布；皮肤 **2.1.1** 已发布。
 剩余验证项：多服务器切换（需第二台）、别名/分词（需确认 Emby 数据源）、
 文件播放记录的四项实机验证（见 `HANDOVER.md` §2.5）。
 
