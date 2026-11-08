@@ -30,7 +30,8 @@ BASE_URL = sys.argv[0] if sys.argv else ""
 
 def main():
     req = router.parse(ARGS)
-    log.debug("dispatch mode=%s action=%s type=%s" % (req.mode, req.action, req.type))
+    log.debug("dispatch mode=%s action=%s type=%s dbid=%s imdb=%s raw=%s" % (
+        req.mode, req.action, req.type, req.dbid, req.imdb, ARGS))
 
     if req.mode == "search":
         # 搜索是唯一会返回目录的模式。
