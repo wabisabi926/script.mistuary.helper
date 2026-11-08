@@ -7,6 +7,9 @@
 TTL 由调用方给（搜索 300 秒、豆瓣 7 天）。
 **不缓存失败**：失败结果不进缓存，否则一次网络抖动会锁死 5 分钟。
 
+**过期文件由 `put()` 机会式清扫**：`get()` 只判断过期、不删文件，只靠设置页
+「清空缓存」全删的话，搜索词是无限的，缓存目录会一直长。
+
 这个模块**不 import xbmc**（目录由调用方传入或惰性解析），可以直接单测。
 """
 
@@ -20,6 +23,15 @@ import time
 
 ADDON_ID = "script.mistuary.helper"
 DEFAULT_TTL = 300
+
+# 每 N 次成功写入触发一次清扫；摊销后每次写入只多几毫秒
+PRUNE_EVERY = 50
+# 超过就按最旧淘汰到 80%，给目录一个硬上限
+MAX_FILES = 2000
+# 最长 TTL（豆瓣 7 天），比它更老的文件一定过期
+MAX_AGE = 7 * 24 * 3600
+
+_writes = 0
 
 
 def cache_dir() -> str:
@@ -61,6 +73,57 @@ def get(key: str, ttl: int = DEFAULT_TTL, root: str | None = None):
     return payload.get("data")
 
 
+def prune(root: str | None = None, now: float | None = None,
+          max_files: int = MAX_FILES, max_age: int = MAX_AGE) -> int:
+    """删掉过期文件和超量文件，返回删除数。
+
+    过期用文件 mtime 判断，不读 JSON 里的 ts：读两千个文件才能拿到 ts，
+    而 stat 一次就够；mtime 一定不早于 ts（写完即落盘），所以按最长 TTL
+    淘汰是安全的。
+    """
+    directory = root or cache_dir()
+    now = time.time() if now is None else now
+    removed = 0
+    alive = []
+
+    try:
+        with os.scandir(directory) as entries:
+            for entry in entries:
+                if not entry.name.endswith(".json"):
+                    continue
+                try:
+                    mtime = entry.stat().st_mtime
+                except OSError:
+                    continue
+                if now - mtime > max_age:
+                    try:
+                        os.remove(entry.path)
+                        removed += 1
+                    except OSError:
+                        pass
+                    continue
+                alive.append((mtime, entry.path))
+    except OSError:
+        return removed
+
+    if len(alive) > max_files:
+        alive.sort()
+        for _, path in alive[:len(alive) - int(max_files * 0.8)]:
+            try:
+                os.remove(path)
+                removed += 1
+            except OSError:
+                pass
+    return removed
+
+
+def _should_prune() -> bool:
+    """每 PRUNE_EVERY 次成功写入返回一次 True。"""
+    global _writes
+    _writes += 1
+    return _writes % PRUNE_EVERY == 0
+
+
 def put(key: str, data, root: str | None = None) -> bool:
     """写缓存。先写 .tmp 再 replace，避免 Kodi 被杀时留下半个文件。"""
     directory = root or cache_dir()
@@ -71,15 +134,18 @@ def put(key: str, data, root: str | None = None) -> bool:
         with open(tmp, "w", encoding="utf-8") as handle:
             json.dump(payload, handle, ensure_ascii=False)
         os.replace(tmp, path)
-        return True
     except OSError:
-        # 缓存写失败不该影响功能，静默吞掉并清理残file
+        # 缓存写失败不该影响功能，静默吞掉并清理残文件
         try:
             if os.path.exists(tmp):
                 os.remove(tmp)
         except OSError:
             pass
         return False
+
+    if _should_prune():
+        prune(directory)
+    return True
 
 
 def clear(root: str | None = None) -> int:
