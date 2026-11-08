@@ -204,10 +204,12 @@ class FanartGlowMonitor:
         import xbmc
 
         # View_51_Poster 是 Home 窗口里的 view，所以 Home 命中即覆盖季页。
+        # Kodi 22 没有 videoinformation / tvshowinformation 这两个窗口名：
+        # 写进表达式会每 tick 刷两条 "Window Translator: Can't find window"。
+        # 电影 / 剧集 / 单集详情都是 DialogVideoInfo.xml，统一叫 movieinformation。
         return bool(
             xbmc.getCondVisibility(
-                "Window.IsVisible(Home) | Window.IsVisible(movieinformation) | "
-                "Window.IsVisible(videoinformation) | Window.IsVisible(tvshowinformation)"
+                "Window.IsVisible(Home) | Window.IsVisible(movieinformation)"
             )
         )
 

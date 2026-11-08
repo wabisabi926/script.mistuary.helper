@@ -97,6 +97,14 @@ def _sync_library_icons_once():
 
 if __name__ == "__main__":
     log.info("service started")
+    # 开关状态属性以前只在插件入口 default.py 里发布，纯服务启动时不会写，
+    # 重启 Kodi 后设置页所有 radiobutton 都会错显示成「关」。开机补一次。
+    try:
+        from lib import skin_bridge
+
+        skin_bridge.snapshot()
+    except Exception as exc:  # noqa: BLE001 - 可选状态不能挡住服务启动
+        log.error("settings snapshot at startup failed: %s" % exc)
     threading.Thread(
         target=_sync_library_icons_once,
         name="mistuary-library-icons",

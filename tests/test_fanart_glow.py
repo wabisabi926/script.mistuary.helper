@@ -154,6 +154,27 @@ class ConstantsTests(unittest.TestCase):
         ]
         self.assertFalse(any("tmdbhelper" in line.lower() for line in imports))
 
+    def test_relevant_window_names_exist_in_kodi22(self):
+        # Kodi 22 的 Window Translator 不认识这两个名字，写进表达式会每 tick
+        # 刷两条 "Can't find window" 错误日志（实机 kodi.log 已复现）。
+        import pathlib
+
+        root = pathlib.Path(__file__).resolve().parent.parent
+        module = (root / "lib" / "fanart_glow.py").read_text(encoding="utf-8")
+        self.assertNotIn("Window.IsVisible(videoinformation)", module)
+        self.assertNotIn("Window.IsVisible(tvshowinformation)", module)
+        self.assertIn("Window.IsVisible(movieinformation)", module)
+        self.assertIn("Window.IsVisible(Home)", module)
+
+    def test_service_publishes_settings_snapshot_on_boot(self):
+        # 开关属性以前只在 default.py 发布，纯服务启动后设置页会全显示「关」。
+        import pathlib
+
+        root = pathlib.Path(__file__).resolve().parent.parent
+        service = (root / "service.py").read_text(encoding="utf-8")
+        boot = service.split("monitor.waitForAbort()")[0]
+        self.assertIn("skin_bridge.snapshot()", boot)
+
 
 if __name__ == "__main__":
     unittest.main()
