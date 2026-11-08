@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 """豆瓣评分（M2）：按 IMDb id 取分，写窗口属性给皮肤。
 
-取分思路来自 TMDbHelper 的豆瓣模块（GPL-3.0），做了三处改动：
+取分思路来自 TMDbHelper 的豆瓣模块（GPL-3.0），做了四处改动：
 - 用本仓库的 http 封装（失败返回 Response，不抛异常）；
 - 双通道按「legacy → frodo」顺序回退，不再随机，排障时路径确定；
-- 缓存 7 天，失败也缓存 30 分钟，避免风控时反复重试。
+- 结果分三态：`ok` 正常缓存 7 天、`missing`（豆瓣没有这条/没评分）也缓存 7 天、
+  `error`（请求失败）只冷却 30 分钟。把「确定没有」和「暂时取不到」分开，
+  冷门片不会每 30 分钟把两条通道重打一遍；
+- 超时压到 4 秒：详情页在皮肤 onload 里同步调用，而通道是串行的。
 
 写 Window(home)：
 
@@ -43,7 +46,9 @@ FRODO_SEARCH = "/search/movie"
 FRODO_API_KEY = "0dad551ec0f84ed02907ff5c42e8ec70"
 FRODO_SECRET = "bf7dddc7c9cfe6f7"
 
-TIMEOUT = 10
+# 详情页在皮肤 onload 里同步调用，两条通道串行；超时太长会直接卡住页面。
+# 实测两条通道正常时 0.2~0.4 秒返回，4 秒有十倍余量。
+TIMEOUT = 4
 USER_AGENTS = (
     "api-client/1 com.douban.frodo/7.22.0.beta9(231) Android/23 product/Mate 40 vendor/HUAWEI model/Mate 40 brand/HUAWEI  rom/android  network/wifi  platform/AndroidPad",
     "api-client/1 com.douban.frodo/7.18.0(230) Android/22 product/MI 9 vendor/Xiaomi model/MI 9 brand/Android  rom/miui6  network/wifi  platform/mobile nd/1",
@@ -107,7 +112,10 @@ def _legacy(imdb_id: str):
 
 
 def _frodo_search(query: str, count: int = 1):
-    """frodo 搜索接口（带签名）。返回 items 列表，失败返回空列表。"""
+    """frodo 搜索接口（带签名）。
+
+    返回 items 列表；**请求失败返回 None**，与「搜到了但没有结果」区分开。
+    """
     path = FRODO_BASE + FRODO_SEARCH
     ts = time.strftime("%Y%m%d")
     params = {
@@ -124,16 +132,21 @@ def _frodo_search(query: str, count: int = 1):
         timeout=TIMEOUT,
     )
     if not resp.ok:
-        return []
+        return None
     payload = resp.json() or {}
     return payload.get("items") or []
 
 
 def _frodo(imdb_id: str):
-    """通道 B：按 IMDb id 搜（frodo）。"""
+    """通道 B：按 IMDb id 搜（frodo）。
+
+    请求失败返回 None；搜到了但没有这条返回 ``(None, None)``。
+    """
     items = _frodo_search(imdb_id, 1)
-    if not items:
+    if items is None:
         return None
+    if not items:
+        return None, None
     return _rating_pair(items[0].get("target") or items[0])
 
 
@@ -146,8 +159,12 @@ def _frodo_by_title(title: str, year: str = ""):
 
     只接受标题完全一致（忽略大小写/空白）的条目；给了年份就要求年份一致，
     避免同名不同年的条目拿错分。
+
+    返回 ``(average, votes)``；请求失败返回 None，正常但没匹配返回 ``(None, None)``。
     """
     items = _frodo_search(title, 5)
+    if items is None:
+        return None
     for entry in items:
         subject = entry.get("target") or entry
         if _norm(subject.get("title") or "") != _norm(title):
@@ -158,24 +175,46 @@ def _frodo_by_title(title: str, year: str = ""):
         pair = _rating_pair(subject)
         if pair[0] is not None:
             return pair
-    return None
+    return None, None
 
 
 def fetch(imdb_id: str) -> tuple:
-    """返回 (average_float, votes_int) 或 (None, None)。"""
+    """按 IMDb id 取分，返回 ``(status, average, votes)``。
+
+    status：
+    - ``ok``      取到分数
+    - ``missing`` 所有通道都正常响应，但豆瓣没有这条或没有评分（可安全长缓存）
+    - ``error``   至少一条通道请求失败（网络/风控/超时），应短冷却后重试
+
+    区分这两种「没分」是必要的：冷门片在豆瓣本来就没有评分，如果当成失败，
+    每 30 分钟就会把两条通道重打一遍，且永远得不到结果。
+    """
+    if not imdb_id:
+        return "missing", None, None
+
+    responded = False
+    failed = False
+
     for channel in (_legacy, _frodo):
         try:
-            average, votes = channel(imdb_id)
+            pair = channel(imdb_id)
         except Exception as exc:  # noqa: BLE001 - 网络/解析都可能炸，统一降级
             log.debug("douban channel %s failed: %s" % (channel.__name__, exc))
+            failed = True
             continue
+        if pair is None:
+            failed = True
+            continue
+        responded = True
+        average, votes = pair
         if average is None:
             continue
         try:
-            return float(average), int(votes or 0)
+            return "ok", float(average), int(votes or 0)
         except (TypeError, ValueError):
             continue
-    return None, None
+
+    return ("missing" if responded and not failed else "error"), None, None
 
 
 def _write(status: str, rating: str = "", votes: str = "", fetched: str = "",
@@ -283,23 +322,35 @@ def run_action(req) -> None:
         log.debug("douban failure cache hit: %s" % imdb_id)
         return
 
-    if imdb_id:
-        average, votes = fetch(imdb_id)
-        # 豆瓣 legacy/frodo 对剧集（TV）按 IMDb 经常查不到，退回标题+年份匹配
-        if average is None and title:
-            log.debug("douban: imdb %s missed, retry by title %r" % (imdb_id, title))
-            average, votes = _frodo_by_title(title, year) or (None, None)
-    else:
-        average, votes = _frodo_by_title(title, year) or (None, None)
+    status, average, votes = fetch(imdb_id) if imdb_id else ("missing", None, None)
+
+    # 豆瓣 legacy/frodo 对剧集（TV）按 IMDb 经常查不到，退回标题+年份匹配。
+    # 只在 missing 时兜底：error 说明端点已经挂了，再打一次只是多等一个超时。
+    if status == "missing" and title:
+        log.debug("douban: imdb %s missed, retry by title %r" % (imdb_id or "-", title))
+        pair = _frodo_by_title(title, year)
+        if pair is None:
+            status = "error"
+        elif pair[0] is not None:
+            average, votes = pair
+            status = "ok"
+
     now = int(time.time())
-    if average is None:
-        # 失败也缓存：风控时别每个详情页都重试
-        cache.put(fail_key, {"status": "error"})
-        _write("error")
-        log.error("douban fetch failed: %s" % (imdb_id or ("title=" + title)))
+    if status == "ok":
+        rating = "%.1f" % average
+        cache.put(key, {"status": "ok", "rating": rating, "votes": votes, "ts": now, "source": "douban"})
+        _write("ok", rating, str(votes), str(now), "douban")
+        log.debug("douban ok: %s -> %s (%d votes)" % (imdb_id or ("title=" + title), rating, votes))
         return
 
-    rating = "%.1f" % average
-    cache.put(key, {"status": "ok", "rating": rating, "votes": votes, "ts": now, "source": "douban"})
-    _write("ok", rating, str(votes), str(now), "douban")
-    log.debug("douban ok: %s -> %s (%d votes)" % (imdb_id or ("title=" + title), rating, votes))
+    if status == "missing":
+        # 豆瓣确实没有这条或没有评分：长缓存，别每 30 分钟把两条通道重打一遍
+        cache.put(key, {"status": "missing", "ts": now})
+        _write("missing")
+        log.debug("douban missing: %s" % (imdb_id or ("title=" + title)))
+        return
+
+    # 请求失败（网络/风控/超时）：只做短冷却，环境恢复后能自愈
+    cache.put(fail_key, {"status": "error"})
+    _write("error")
+    log.error("douban fetch failed: %s" % (imdb_id or ("title=" + title)))
