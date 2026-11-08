@@ -25,10 +25,12 @@ PROPERTY_GLOW = "Mistuary.FanartGlow"
 PROPERTY_SOURCE = "Mistuary.FanartSource"
 HOME_WINDOW_ID = 10000
 
-# 实机（Kodi 22 首页）验证：0.25 的色光底平均只比纯黑高约 8 灰阶，肉眼
-# 几乎看不见，等于没做。0.40 峰值约 90/255，透黑玻璃面板不受影响。
-# 之前「0.42 会把玻璃垫灰」是模拟图推断，已被实机证伪。
-BRIGHTNESS = 0.40
+# 对齐 fuse3 后的亮度。查过 fuse3 源码：它的模糊底完全不压暗，色光是靠
+# 清晰图左缘 diffuse 透明「放」出来的，左侧本身也压到 18/255（和实机一致）。
+# 所以之前一味提亮度没用，得先把左缘黑渐隐改成色光过渡；配合后实测
+# 0.60 左侧均值 21/255、图边缘有明显暖色光晕，玻璃档位差不受影响。
+# 0.25 太弱（只比纯黑高 8 灰阶）；「0.42 会垫灰玻璃」是模拟图推断，已证伪。
+BRIGHTNESS = 0.60
 # 先缩小再模糊：计算量与源图分辨率无关，4K 剧照和 720p 一样快。
 SMALL_SIZE = (320, 180)
 BLUR_RADIUS = 27
@@ -195,22 +197,14 @@ def should_render(source, pending, published, now, settle=SETTLE_SECONDS):
 
 
 class FanartGlowMonitor:
-    """低开销轮询：只在影视相关窗口活动，开关关掉时按 2s 空转。"""
+    """低开销轮询：只在影视相关窗口活动，其余时间按 2s 空转。
+
+    功能无常开（0.5.0 起移除开关），不做任何用户可关的分支。
+    """
 
     def __init__(self):
         self._published = None
         self._pending = None
-
-    def _enabled(self):
-        import xbmc
-
-        # 开关读插件设置；皮肤侧只是显示/切换，不重复存一份状态。
-        try:
-            import xbmcaddon
-
-            return bool(xbmcaddon.Addon().getSettingBool("fanart_glow"))
-        except Exception:  # noqa: BLE001
-            return False
 
     def _relevant_window(self):
         import xbmc
@@ -260,19 +254,14 @@ class FanartGlowMonitor:
         import xbmc  # noqa: F401 - 保持与 Kodi 环境一致
 
         now = time.time() if now is None else now
-        if not self._enabled() or not self._relevant_window():
-            if self._published is not None:
-                self._publish("")
-                self._published = None
-                self._pending = None
+
+        # 窗口转场 / 源图短暂为空都保留上一张，别制造属性抖动：
+        # 属性清空再写回会让皮肤卸载并重载色光纹理，实机表现为左缘闪硬切线。
+        if not self._relevant_window():
             return IDLE_SECONDS
 
         source = self._read_source()
         if not source:
-            if self._published is not None:
-                self._publish("")
-                self._published = None
-                self._pending = None
             return POLL_SECONDS
 
         run, self._pending = should_render(

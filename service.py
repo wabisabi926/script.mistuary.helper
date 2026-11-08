@@ -119,8 +119,9 @@ if __name__ == "__main__":
     player = HelperPlayer(resume)
     monitor = HelperService(resume)
 
-    # 背景色光底：400ms 轮询，源图停稳 300ms 才算一次；开关关闭时线程按
-    # 2s 空转，不做任何 PIL 计算。起不来也不能影响播放/续播主流程。
+    # 背景色光底：400ms 轮询，源图停稳 300ms 才算一次；非影视窗口时线程按
+    # 2s 空转，不做任何 PIL 计算。功能无常开（0.5.0 起无开关）。
+    # 起不来也不能影响播放/续播主流程。
     glow_stop = threading.Event()
     try:
         from lib import fanart_glow

@@ -1,3 +1,20 @@
+0.5.0 背景剧照色光底
+[新增]
+- lib/fanart_glow.py：当前剧照缩略 + 高斯模糊生成 640×360 色光底，写入
+  Window(home).Property(Mistuary.FanartGlow)，皮肤据此铺底；亮度 0.60
+- md5 缓存 + LRU 24，缓存 key 含亮度；image:// 源先经 xbmcvfs.copy 落地再处理
+- service 400ms 轮询 + 300ms 焦点停稳，仅在 Home / 电影信息窗口活动，
+  非影视窗口按 2s 空转
+[依赖]
+- 声明 script.module.pil：Kodi 22 系统自带 Pillow，19-21 由该模块提供；
+  Pillow 缺失 / 坏图 / 无剧照时静默降级为空属性
+[修复]
+- 窗口转场 / 源图短暂为空不再清空色光属性，避免皮肤反复重载色光纹理
+- 窗口判断去掉 Kodi 22 不存在的 videoinformation / tvshowinformation，
+  不再刷 Window Translator 告警
+- 服务启动补发布设置快照，重启 Kodi 后设置页开关状态正确
+- CI test job 补装 Pillow
+
 0.4.0 未同步内容可直接浏览
 （0.4.0 与 0.3.11 功能相同，仅重新编号发布；避免 0.3.x 递增尾巴）
 [新增]
