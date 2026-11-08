@@ -4,9 +4,10 @@
 取分思路来自 TMDbHelper 的豆瓣模块（GPL-3.0），做了四处改动：
 - 用本仓库的 http 封装（失败返回 Response，不抛异常）；
 - 双通道按「legacy → frodo」顺序回退，不再随机，排障时路径确定；
-- 结果分三态：`ok` 正常缓存 7 天、`missing`（豆瓣没有这条/没评分）也缓存 7 天、
-  `error`（请求失败）只冷却 30 分钟。把「确定没有」和「暂时取不到」分开，
-  冷门片不会每 30 分钟把两条通道重打一遍；
+- 结果分三态，缓存时长按数据变化频率分别定：`ok` 30 天（评分月级不变）、
+  `missing`（豆瓣没有这条/没评分）3 天（新片随时开分）、`error`（请求失败）
+  30 分钟。把「确定没有」和「暂时取不到」分开，冷门片不会每 30 分钟把两条
+  通道重打一遍；
 - 超时压到 4 秒：详情页在皮肤 onload 里同步调用，而通道是串行的。
 
 写 Window(home)：
@@ -35,7 +36,11 @@ from urllib.parse import quote, urlencode, urlparse
 
 from lib import cache, config, http, kodi, log
 
-DOUBAN_TTL = 7 * 24 * 3600
+# 有分：豆瓣评分是几十万人投票的加权平均，月级基本不动，30 天足够
+DOUBAN_TTL = 30 * 24 * 3600
+# 没分：新片随时会开分，所以「豆瓣确实没有」不能跟着 30 天，3 天后重查一次
+MISSING_TTL = 3 * 24 * 3600
+# 请求失败：短冷却，环境恢复后能自愈
 FAILURE_TTL = 30 * 60
 
 LEGACY_IMDB_URL = "https://api.douban.com/v2/movie/imdb/%s"
@@ -307,6 +312,9 @@ def run_action(req) -> None:
 
     key = cache.make_key("douban", imdb_id) if imdb_id else cache.make_key("douban_title", title, year)
     cached = cache.get(key, DOUBAN_TTL)
+    if cached is not None and cached.get("status") == "missing":
+        # 「没评分」按短 TTL 复核一次：新片随时会开分，不能跟着 30 天一起失效
+        cached = cache.get(key, MISSING_TTL)
     if cached is not None:
         if cached.get("status") == "ok":
             _write("ok", cached.get("rating", ""), str(cached.get("votes", "")),

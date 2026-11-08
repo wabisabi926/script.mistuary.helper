@@ -371,7 +371,7 @@ def test_connection(server) -> tuple:
     return True, ("%s %s" % (name, version)).strip()
 
 
-def douban_ratings_by_imdb(server, imdbs, ttl: int = 6 * 3600):
+def douban_ratings_by_imdb(server, imdbs, ttl: int = 24 * 3600):
     """按 IMDb 批量取豆瓣分（StrmAssistant 的 `/Douban/RatingsByImdb`）。
 
     返回 `{imdb_lower: {"rating", "votes", "applied", "item_id", "subject_id"}}`。
@@ -380,8 +380,10 @@ def douban_ratings_by_imdb(server, imdbs, ttl: int = 6 * 3600):
     - 返回空 dict 表示请求成功但 Emby 一条都不认识（可据此判断要不要回退）；
     - 条目存在但没豆瓣分时，`rating` 为 None（调用方应显示「无豆瓣」而不是回退）。
 
-    TTL 默认 6 小时：这里的分数和直连豆瓣拿到的是同一份数据（后者缓存 7 天），
-    原来 600 秒意味着详情页反复打开时每 10 分钟重打一次 Emby。
+    TTL 默认 1 天：这里拿到的是和直连豆瓣同一份数据，而 Emby 在局域网内、
+    重查只要几十毫秒。既不需要原来的 600 秒（详情页反复打开就重打），
+    也不必跟着直连的 30 天一起变长——StrmAssistant 自己的同步也有滞后，
+    留 1 天能及时跟上。
     """
     wanted = sorted({(i or "").strip().lower() for i in imdbs if (i or "").strip()})
     if not wanted:

@@ -11,7 +11,7 @@ from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from lib import douban  # noqa: E402
+from lib import cache, douban  # noqa: E402
 
 
 class Req(object):
@@ -263,6 +263,45 @@ class RunActionTest(unittest.TestCase):
             douban.run_action(Req(imdb="tt1340507"))
         fetch.assert_not_called()
         self.assertEqual(self.written[douban.PROP_STATUS], "missing")
+
+    def test_stale_missing_is_refetched(self):
+        """missing 的缓存超过 MISSING_TTL 就重查，哪怕还没到 DOUBAN_TTL。"""
+        ttls = []
+
+        def fake_get(key, ttl=300, root=None):
+            ttls.append(ttl)
+            if ttl == douban.DOUBAN_TTL:
+                return {"status": "missing", "ts": 1}
+            return None
+
+        with mock.patch.object(douban, "resolve_imdb", return_value="tt1340507"), \
+             mock.patch.object(douban.cache, "get", side_effect=fake_get), \
+             mock.patch.object(douban, "fetch", return_value=("missing", None, None)) as fetch, \
+             mock.patch.object(douban.cache, "put"):
+            douban.run_action(Req(imdb="tt1340507"))
+
+        self.assertIn(douban.MISSING_TTL, ttls)
+        fetch.assert_called_once()
+
+    def test_fresh_missing_is_reused_without_request(self):
+        """3 天内命中 missing 就不重查。"""
+        def fake_get(key, ttl=300, root=None):
+            return {"status": "missing", "ts": 1}
+
+        with mock.patch.object(douban, "resolve_imdb", return_value="tt1340507"), \
+             mock.patch.object(douban.cache, "get", side_effect=fake_get), \
+             mock.patch.object(douban, "fetch") as fetch:
+            douban.run_action(Req(imdb="tt1340507"))
+
+        fetch.assert_not_called()
+        self.assertEqual(self.written[douban.PROP_STATUS], "missing")
+
+    def test_ttl_ladder_is_ordered(self):
+        """长 TTL 必须盖住短 TTL，否则短的那个永远轮不到。"""
+        self.assertGreater(douban.DOUBAN_TTL, douban.MISSING_TTL)
+        self.assertGreater(douban.MISSING_TTL, douban.FAILURE_TTL)
+        # 清扫不能比业务最长 TTL 更早删文件
+        self.assertGreaterEqual(cache.MAX_AGE, douban.DOUBAN_TTL)
 
 
 if __name__ == "__main__":
