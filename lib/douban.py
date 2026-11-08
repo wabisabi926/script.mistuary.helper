@@ -48,6 +48,7 @@ LEGACY_API_KEY = "0ab215a8b1977939201640fa14c66bab"
 
 FRODO_BASE = "https://frodo.douban.com/api/v2"
 FRODO_SEARCH = "/search/movie"
+FRODO_SUBJECT = "/movie/%s"
 FRODO_API_KEY = "0dad551ec0f84ed02907ff5c42e8ec70"
 FRODO_SECRET = "bf7dddc7c9cfe6f7"
 
@@ -183,6 +184,34 @@ def _frodo_by_title(title: str, year: str = ""):
     return None, None
 
 
+def _frodo_by_subject(subject_id: str):
+    """按豆瓣 subject id 直接取分，返回 ``(average, votes)``。
+
+    比标题搜索稳：不用匹配标题，译名不一致、同名不同年都不会拿错。
+    请求失败返回 None；条目正常但没有评分返回 ``(None, None)``。
+    """
+    subject_id = str(subject_id or "").strip()
+    if not subject_id.isdigit():
+        return None
+
+    path = FRODO_BASE + FRODO_SUBJECT % subject_id
+    ts = time.strftime("%Y%m%d")
+    params = {
+        "apiKey": FRODO_API_KEY,
+        "_ts": ts,
+        "_sig": _frodo_sign(path, ts),
+        "os_rom": "android",
+    }
+    resp = http.request(
+        path + "?" + urlencode(params),
+        headers={"User-Agent": random.choice(USER_AGENTS)},
+        timeout=TIMEOUT,
+    )
+    if not resp.ok:
+        return None
+    return _rating_pair(resp.json() or {})
+
+
 def fetch(imdb_id: str) -> tuple:
     """按 IMDb id 取分，返回 ``(status, average, votes)``。
 
@@ -284,7 +313,17 @@ def run_action(req) -> None:
     title = (getattr(req, "title", "") or "").strip() or kodi.get_home_property(PROP_QUERY)
     year = (getattr(req, "year", "") or "").strip() or kodi.get_home_property(PROP_YEAR)
 
-    if not imdb_id and not title:
+    # 皮肤只传标题时，从 Kodi 库把 ID 补回来：豆瓣 subject id 按 ID 直查最稳，
+    # 没有 subject 时 IMDb 还能喂给 Emby 的批量评分接口。
+    douban_id = ""
+    if title:
+        kind = kodi.LIBRARY_KIND.get(getattr(req, "type", "") or "", "")
+        ids = kodi.library_uniqueids(kind, title, year) if kind else {}
+        douban_id = (ids.get("douban") or "").strip()
+        if not imdb_id:
+            imdb_id = (ids.get("imdb") or "").strip()
+
+    if not imdb_id and not douban_id and not title:
         _write("missing")
         log.debug("douban: no imdb id and no title (dbid=%s)" % getattr(req, "dbid", ""))
         return
@@ -310,7 +349,10 @@ def run_action(req) -> None:
                 log.debug("douban via emby: %s -> %s" % (imdb_id, text))
                 return
 
-    key = cache.make_key("douban", imdb_id) if imdb_id else cache.make_key("douban_title", title, year)
+    ref = imdb_id or (("douban:" + douban_id) if douban_id else ("title=" + title))
+    key = (cache.make_key("douban_subject", douban_id) if douban_id
+           else cache.make_key("douban", imdb_id) if imdb_id
+           else cache.make_key("douban_title", title, year))
     cached = cache.get(key, DOUBAN_TTL)
     if cached is not None and cached.get("status") == "missing":
         # 「没评分」按短 TTL 复核一次：新片随时会开分，不能跟着 30 天一起失效
@@ -321,20 +363,32 @@ def run_action(req) -> None:
                    str(cached.get("ts", int(time.time()))), cached.get("source", "douban"))
         else:
             _write("missing")
-        log.debug("douban cache hit: %s" % imdb_id)
+        log.debug("douban cache hit: %s" % ref)
         return
 
     fail_key = cache.make_key("douban_fail", key)
     if cache.get(fail_key, FAILURE_TTL) is not None:
         _write("error")
-        log.debug("douban failure cache hit: %s" % imdb_id)
+        log.debug("douban failure cache hit: %s" % ref)
         return
 
-    status, average, votes = fetch(imdb_id) if imdb_id else ("missing", None, None)
+    if douban_id:
+        pair = _frodo_by_subject(douban_id)
+        if pair is None:
+            # subject 接口失败：有 IMDb 就换条路，别把能拿到的分丢掉
+            status, average, votes = fetch(imdb_id) if imdb_id else ("error", None, None)
+        elif pair[0] is None:
+            status, average, votes = "missing", None, None
+        else:
+            status, average, votes = "ok", pair[0], pair[1] or 0
+            log.debug("douban subject hit: %s -> %s" % (douban_id, average))
+    else:
+        status, average, votes = fetch(imdb_id) if imdb_id else ("missing", None, None)
 
     # 豆瓣 legacy/frodo 对剧集（TV）按 IMDb 经常查不到，退回标题+年份匹配。
     # 只在 missing 时兜底：error 说明端点已经挂了，再打一次只是多等一个超时。
-    if status == "missing" and title:
+    # 有 subject id 时也不用兜底：豆瓣条目已经确定，标题搜索只会是同一个库。
+    if status == "missing" and title and not douban_id:
         log.debug("douban: imdb %s missed, retry by title %r" % (imdb_id or "-", title))
         pair = _frodo_by_title(title, year)
         if pair is None:
@@ -348,17 +402,17 @@ def run_action(req) -> None:
         rating = "%.1f" % average
         cache.put(key, {"status": "ok", "rating": rating, "votes": votes, "ts": now, "source": "douban"})
         _write("ok", rating, str(votes), str(now), "douban")
-        log.debug("douban ok: %s -> %s (%d votes)" % (imdb_id or ("title=" + title), rating, votes))
+        log.debug("douban ok: %s -> %s (%d votes)" % (ref, rating, votes))
         return
 
     if status == "missing":
         # 豆瓣确实没有这条或没有评分：长缓存，别每 30 分钟把两条通道重打一遍
         cache.put(key, {"status": "missing", "ts": now})
         _write("missing")
-        log.debug("douban missing: %s" % (imdb_id or ("title=" + title)))
+        log.debug("douban missing: %s" % ref)
         return
 
     # 请求失败（网络/风控/超时）：只做短冷却，环境恢复后能自愈
     cache.put(fail_key, {"status": "error"})
     _write("error")
-    log.error("douban fetch failed: %s" % (imdb_id or ("title=" + title)))
+    log.error("douban fetch failed: %s" % ref)

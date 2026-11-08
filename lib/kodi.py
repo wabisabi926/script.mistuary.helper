@@ -158,6 +158,9 @@ VIDEO_LIBRARY = {
     "episodes": ("VideoLibrary.GetEpisodes", "episodes", "episodeid"),
 }
 
+# 皮肤传的是 ListItem.DBType（movie/tvshow/episode），这里换成查库用的复数键
+LIBRARY_KIND = {"movie": "movies", "tvshow": "tvshows", "episode": "episodes"}
+
 
 def video_items(kind: str) -> list:
     """枚举 Kodi 库里某类条目：`[{"id": int, "imdb": str, "title": str}]`。
@@ -249,6 +252,60 @@ def library_id_by_provider(kind: str, title: str, tmdb="", tvdb="") -> int:
         return rows[0].get(id_field) or 0
 
     return 0
+
+
+def library_uniqueids(kind: str, title: str, year: str = "") -> dict:
+    """按标题查 Kodi 库，返回这条的 uniqueid（imdb / tmdb / douban…）。
+
+    用途：皮肤详情页只传标题时，把豆瓣 subject id 和 IMDb id 补回来。
+    豆瓣按 subject id 直查比按标题搜稳（译名不一致也能命中），有 IMDb 时
+    还能喂给 Emby 的批量评分接口。
+
+    同一部片可能被刮削成多行（重复入库），所以看所有行：
+    ID 完全一致直接认；不一致才用年份收敛，筛完仍不唯一就返回 {}，
+    宁可回退标题搜索，也不猜错条目。查不到返回 {}，不抛异常。
+    """
+    spec = VIDEO_LIBRARY.get(kind)
+    if not spec or not title:
+        return {}
+
+    method, key, _ = spec
+    try:
+        import json
+        import xbmc
+
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": method,
+            "params": {
+                "filter": {"field": "title", "operator": "is", "value": title},
+                "properties": ["uniqueid", "title", "year"],
+                "limits": {"start": 0, "end": 50},
+            },
+        }
+        raw = xbmc.executeJSONRPC(json.dumps(payload))
+        rows = (((json.loads(raw).get("result") or {}).get(key)) or [])
+    except Exception:  # noqa: BLE001 - Kodi 不可用/库为空都按未命中处理
+        return {}
+
+    if not rows:
+        return {}
+
+    def _ids(row: dict) -> dict:
+        uniqueid = row.get("uniqueid") or {}
+        return {k: str(v).strip() for k, v in uniqueid.items() if str(v).strip()}
+
+    first = _ids(rows[0])
+    if all(_ids(row) == first for row in rows[1:]):
+        return first
+
+    year = str(year or "").strip()
+    if year:
+        matched = [_ids(row) for row in rows if str(row.get("year") or "") == year]
+        if len(matched) == 1:
+            return matched[0]
+    return {}
 
 
 def database_path(prefix: str = "MyVideos") -> str:

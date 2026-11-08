@@ -93,6 +93,60 @@ class LibraryLookupTest(unittest.TestCase):
                          {"field": "title", "operator": "is", "value": "测试剧"})
 
 
+class LibraryUniqueidsTest(unittest.TestCase):
+    """按标题反查 uniqueid：同名片多行要能收敛，绝不猜错条目。"""
+
+    def _lookup(self, rows, kind="movies", year=""):
+        fake = FakeXbmc(_jsonrpc_result(rows, "movies" if kind == "movies" else "tvshows"))
+        with mock.patch.dict(sys.modules, {"xbmc": fake}):
+            ids = kodi.library_uniqueids(kind, "测试片", year)
+        return ids, fake
+
+    def test_returns_all_provider_ids(self):
+        ids, _ = self._lookup([{"movieid": 1, "title": "测试片", "year": 2020,
+                                "uniqueid": {"imdb": "tt1", "tmdb": "22", "douban": "333"}}])
+        self.assertEqual(ids, {"imdb": "tt1", "tmdb": "22", "douban": "333"})
+
+    def test_duplicate_rows_with_same_ids_are_accepted(self):
+        row = {"movieid": 1, "title": "测试片", "year": 2020,
+               "uniqueid": {"imdb": "tt1", "douban": "333"}}
+        ids, _ = self._lookup([dict(row), dict(row, movieid=2)])
+        self.assertEqual(ids["douban"], "333")
+
+    def test_conflicting_rows_are_narrowed_by_year(self):
+        rows = [
+            {"movieid": 1, "title": "测试片", "year": 1999, "uniqueid": {"imdb": "tt1"}},
+            {"movieid": 2, "title": "测试片", "year": 2020, "uniqueid": {"imdb": "tt2"}},
+        ]
+        ids, _ = self._lookup(rows, year="2020")
+        self.assertEqual(ids, {"imdb": "tt2"})
+
+    def test_conflicting_rows_without_year_return_empty(self):
+        rows = [
+            {"movieid": 1, "title": "测试片", "year": 1999, "uniqueid": {"imdb": "tt1"}},
+            {"movieid": 2, "title": "测试片", "year": 2020, "uniqueid": {"imdb": "tt2"}},
+        ]
+        ids, _ = self._lookup(rows)
+        self.assertEqual(ids, {})
+
+    def test_empty_title_skips_request(self):
+        fake = FakeXbmc(_jsonrpc_result([], "movies"))
+        with mock.patch.dict(sys.modules, {"xbmc": fake}):
+            self.assertEqual(kodi.library_uniqueids("movies", ""), {})
+        self.assertIsNone(fake.last_request)
+
+    def test_unknown_kind_skips_request(self):
+        fake = FakeXbmc(_jsonrpc_result([], "movies"))
+        with mock.patch.dict(sys.modules, {"xbmc": fake}):
+            self.assertEqual(kodi.library_uniqueids("", "测试片"), {})
+        self.assertIsNone(fake.last_request)
+
+    def test_filter_uses_title_is(self):
+        _, fake = self._lookup([])
+        self.assertEqual(fake.last_request["params"]["filter"],
+                         {"field": "title", "operator": "is", "value": "测试片"})
+
+
 class FakeListItem(object):
     def __init__(self, label="", offscreen=False):
         self.label = label

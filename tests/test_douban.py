@@ -15,12 +15,13 @@ from lib import cache, douban  # noqa: E402
 
 
 class Req(object):
-    def __init__(self, dbid="", imdb="", tmdb="", title="", year=""):
+    def __init__(self, dbid="", imdb="", tmdb="", title="", year="", type=""):
         self.dbid = dbid
         self.imdb = imdb
         self.tmdb = tmdb
         self.title = title
         self.year = year
+        self.type = type
 
 
 class FakeResponse(object):
@@ -128,6 +129,34 @@ class TitleFallbackTest(unittest.TestCase):
         """请求失败返回 None，与「正常但没匹配」的 (None, None) 区分开。"""
         with mock.patch.object(douban, "_frodo_search", return_value=None):
             self.assertIsNone(douban._frodo_by_title("让子弹飞", "2010"))
+
+
+class SubjectTest(unittest.TestCase):
+    """按豆瓣 subject id 直查：不搜标题，译名不一致也不会拿错。"""
+
+    def test_ok(self):
+        payload = {"rating": {"value": 7.1, "count": 205276}}
+        with mock.patch.object(douban.http, "request",
+                               return_value=FakeResponse(payload)) as called:
+            self.assertEqual(douban._frodo_by_subject("21441132"), (7.1, 205276))
+        url = called.call_args.args[0]
+        self.assertIn("/movie/21441132", url)
+        self.assertIn("_sig=", url)
+
+    def test_no_rating_is_empty_pair(self):
+        with mock.patch.object(douban.http, "request",
+                               return_value=FakeResponse({"rating": {}})):
+            self.assertEqual(douban._frodo_by_subject("1"), (None, None))
+
+    def test_request_failure_returns_none(self):
+        with mock.patch.object(douban.http, "request",
+                               return_value=FakeResponse({}, ok=False)):
+            self.assertIsNone(douban._frodo_by_subject("1"))
+
+    def test_non_numeric_id_returns_none_without_request(self):
+        with mock.patch.object(douban.http, "request") as called:
+            self.assertIsNone(douban._frodo_by_subject("abc"))
+        called.assert_not_called()
 
 
 class RunActionTest(unittest.TestCase):
@@ -245,6 +274,52 @@ class RunActionTest(unittest.TestCase):
             douban.run_action(Req(imdb="tt5311514", title="你的名字", year="2016"))
         self.assertEqual(self.written[douban.PROP_STATUS], "error")
         self.assertTrue(any("douban_fail" in str(c) for c in put.call_args_list))
+
+    def test_subject_id_from_library_is_used_first(self):
+        """皮肤只给标题时，库里补到的 subject id 直接查豆瓣，不绕标题搜索。"""
+        with mock.patch.object(douban, "resolve_imdb", return_value=""), \
+             mock.patch.object(douban.kodi, "library_uniqueids",
+                               return_value={"imdb": "tt2567026", "douban": "21441132"}), \
+             mock.patch.object(douban, "_emby_lookup", return_value=None), \
+             mock.patch.object(douban, "_frodo_by_subject", return_value=(7.1, 205276)) as by_subject:
+            douban.run_action(Req(title="爱丽丝梦游仙境：镜中奇遇记", year="2016", type="movie"))
+        by_subject.assert_called_once_with("21441132")
+        self.assertEqual(self.written[douban.PROP_STATUS], "ok")
+        self.assertEqual(self.written[douban.PROP_RATING], "7.1")
+        self.assertEqual(self.written[douban.PROP_VOTES], "205276")
+
+    def test_subject_missing_skips_title_fallback(self):
+        """subject 已确定没有评分时，不再按标题打一次同一个库。"""
+        with mock.patch.object(douban, "resolve_imdb", return_value=""), \
+             mock.patch.object(douban.kodi, "library_uniqueids", return_value={"douban": "123"}), \
+             mock.patch.object(douban, "_frodo_by_subject", return_value=(None, None)), \
+             mock.patch.object(douban, "_frodo_by_title") as by_title:
+            douban.run_action(Req(title="冷门片", year="2020", type="movie"))
+        by_title.assert_not_called()
+        self.assertEqual(self.written[douban.PROP_STATUS], "missing")
+
+    def test_subject_failure_falls_back_to_imdb(self):
+        """subject 接口挂了但库里有 IMDb：换 IMDb 通道，别把分丢掉。"""
+        settings = {"douban_enabled": True, "douban_prefer_emby": False}
+        with mock.patch.object(douban, "resolve_imdb", return_value=""), \
+             mock.patch.object(douban.kodi, "library_uniqueids",
+                               return_value={"imdb": "tt1", "douban": "123"}), \
+             mock.patch.object(douban.config, "read_settings", return_value=settings), \
+             mock.patch.object(douban, "_frodo_by_subject", return_value=None), \
+             mock.patch.object(douban, "fetch", return_value=("ok", 8.0, 10)) as fetch:
+            douban.run_action(Req(title="片", year="2020", type="movie"))
+        fetch.assert_called_once_with("tt1")
+        self.assertEqual(self.written[douban.PROP_STATUS], "ok")
+
+    def test_cache_key_uses_subject_id(self):
+        """缓存键优先用 subject id：标题改了也不会重新打请求。"""
+        with mock.patch.object(douban, "resolve_imdb", return_value=""), \
+             mock.patch.object(douban.kodi, "library_uniqueids", return_value={"douban": "333"}), \
+             mock.patch.object(douban, "_frodo_by_subject", return_value=(8.0, 1)), \
+             mock.patch.object(douban.cache, "put") as put:
+            douban.run_action(Req(title="片", type="movie"))
+        keys = [str(c) for c in put.call_args_list]
+        self.assertTrue(any("douban_subject" in k for k in keys))
 
     def test_cached_ok_is_reused(self):
         cached = {"status": "ok", "rating": "8.6", "votes": 123, "ts": 1}
