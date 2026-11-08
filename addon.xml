@@ -5,6 +5,10 @@
        provider-name="wabisabi926">
     <requires>
         <import addon="xbmc.python" version="3.0.1"/>
+        <!-- 背景色光底要跑高斯模糊。Kodi 22 起系统 Python 自带 Pillow，
+             这个模块只剩一个空壳；Kodi 19/20/21 上它才真正提供 lib。
+             两边都声明，跨版本零成本，且不涉及 TMDbHelper。 -->
+        <import addon="script.module.pil" version="1.1.7"/>
     </requires>
     <extension point="xbmc.python.pluginsource" library="default.py">
         <!-- provides=video：搜索结果要作为视频目录被 Kodi 识别。

@@ -110,8 +110,26 @@ if __name__ == "__main__":
     resume.start()
     player = HelperPlayer(resume)
     monitor = HelperService(resume)
+
+    # 背景色光底：400ms 轮询，源图停稳 300ms 才算一次；开关关闭时线程按
+    # 2s 空转，不做任何 PIL 计算。起不来也不能影响播放/续播主流程。
+    glow_stop = threading.Event()
+    try:
+        from lib import fanart_glow
+
+        glow = fanart_glow.FanartGlowMonitor()
+        threading.Thread(
+            target=glow.run,
+            args=(glow_stop,),
+            name="mistuary-fanart-glow",
+            daemon=True,
+        ).start()
+    except Exception as exc:  # noqa: BLE001 - 服务不能因可选功能退出
+        log.error("fanart glow service failed to start: %s" % exc)
+
     try:
         monitor.waitForAbort()
     finally:
+        glow_stop.set()
         del player
         resume.stop()

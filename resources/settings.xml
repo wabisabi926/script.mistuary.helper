@@ -163,6 +163,16 @@
             </group>
         </category>
 
+        <category id="appearance" label="32162" help="">
+            <group id="1" label="32162">
+                <setting id="fanart_glow" type="boolean" label="32160" help="32161">
+                    <level>0</level>
+                    <default>true</default>
+                    <control type="toggle"/>
+                </setting>
+            </group>
+        </category>
+
         <category id="logs" label="32044" help="">
             <group id="1" label="32044">
                 <setting id="debug_log" type="boolean" label="32005" help="32058">

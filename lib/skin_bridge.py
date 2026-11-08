@@ -11,6 +11,7 @@ Window(home) 属性；皮肤只读属性、点击时回调 toggle_setting。
     Mistuary.Helper.PlaylistFolder
     Mistuary.Helper.PlaylistNextSeason
     Mistuary.Helper.FileResume
+    Mistuary.Helper.FanartGlow
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ SETTINGS = {
     "playlist_completion_folder": "Mistuary.Helper.PlaylistFolder",
     "playlist_completion_next_season": "Mistuary.Helper.PlaylistNextSeason",
     "file_resume": "Mistuary.Helper.FileResume",
+    "fanart_glow": "Mistuary.Helper.FanartGlow",
 }
 
 

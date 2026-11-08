@@ -347,3 +347,15 @@ msgstr "Library cover sync failed ({0})"
 msgctxt "#32155"
 msgid "Nothing to show here"
 msgstr "Nothing to show here"
+
+msgctxt "#32160"
+msgid "Background colour glow"
+msgstr "Background colour glow"
+
+msgctxt "#32161"
+msgid "Blur the current fanart into a dim colour wash behind the clear image. Off falls back to plain black."
+msgstr "Blur the current fanart into a dim colour wash behind the clear image. Off falls back to plain black."
+
+msgctxt "#32162"
+msgid "Appearance"
+msgstr "Appearance"
