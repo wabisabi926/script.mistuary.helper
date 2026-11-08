@@ -25,8 +25,10 @@ PROPERTY_GLOW = "Mistuary.FanartGlow"
 PROPERTY_SOURCE = "Mistuary.FanartSource"
 HOME_WINDOW_ID = 10000
 
-# 透黑玻璃是相乘关系，超过 0.4 会把 UI 垫灰、把亮度档位差压平。
-BRIGHTNESS = 0.25
+# 实机（Kodi 22 首页）验证：0.25 的色光底平均只比纯黑高约 8 灰阶，肉眼
+# 几乎看不见，等于没做。0.40 峰值约 90/255，透黑玻璃面板不受影响。
+# 之前「0.42 会把玻璃垫灰」是模拟图推断，已被实机证伪。
+BRIGHTNESS = 0.40
 # 先缩小再模糊：计算量与源图分辨率无关，4K 剧照和 720p 一样快。
 SMALL_SIZE = (320, 180)
 BLUR_RADIUS = 27
@@ -118,6 +120,16 @@ def prune(directory, max_files=MAX_FILES):
     return removed
 
 
+def cache_digest(source, brightness=BRIGHTNESS):
+    """缓存 key 必须带亮度：改 BRIGHTNESS 后旧 jpg 不能被误命中复用。
+
+    否则本机/用户升级时 md5 仍指向 0.25 时代的文件，重启后看起来像没改。
+    """
+    return hashlib.md5(
+        ("%s|%.2f" % (source, brightness)).encode("utf-8")
+    ).hexdigest()[:12]
+
+
 def render(source):
     """把皮肤给的源图换成色光 jpg 的本地路径；失败返回 None。
 
@@ -131,7 +143,7 @@ def render(source):
         import xbmcvfs
 
         directory = _glow_dir()
-        digest = hashlib.md5(source.encode("utf-8")).hexdigest()[:12]
+        digest = cache_digest(source)
         dest = os.path.join(directory, "glow-%s.jpg" % digest)
         # 命中缓存：连 xbmcvfs.copy 都省掉，滚动回看过的条目是零计算。
         if os.path.isfile(dest) and os.path.getsize(dest) > 0:

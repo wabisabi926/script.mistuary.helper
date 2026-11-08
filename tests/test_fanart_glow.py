@@ -23,8 +23,8 @@ def _solid_source(path, color=(255, 255, 255)):
 
 
 class BuildGlowTests(unittest.TestCase):
-    def test_white_source_is_dimmed_to_quarter(self):
-        """纯白源图压到 0.25 后均值应在 55~75，不能还是白的。"""
+    def test_white_source_is_dimmed_to_brightness(self):
+        """纯白源图压到 0.40 后均值应在 85~120，不能还是白的。"""
         try:
             from PIL import Image
         except ImportError:  # pragma: no cover - CI 无 Pillow 时跳过图像断言
@@ -40,8 +40,8 @@ class BuildGlowTests(unittest.TestCase):
         im = Image.open(io.BytesIO(payload)).convert("RGB")
         self.assertEqual(im.size, (640, 360))
         avg = ImageStat.Stat(im.convert("L")).mean[0]
-        self.assertGreater(avg, 45)
-        self.assertLess(avg, 85)
+        self.assertGreater(avg, 85)
+        self.assertLess(avg, 120)
 
     def test_brightness_zero_is_black(self):
         try:
@@ -136,8 +136,19 @@ class PruneTests(unittest.TestCase):
 
 class ConstantsTests(unittest.TestCase):
     def test_brightness_matches_skin_preview(self):
-        """0.42 会把透黑玻璃垫灰，锁死 0.25。"""
-        self.assertAlmostEqual(fanart_glow.BRIGHTNESS, 0.25)
+        """实机验证后定 0.40：0.25 太弱，0.42 也不会垫灰玻璃。"""
+        self.assertAlmostEqual(fanart_glow.BRIGHTNESS, 0.40)
+
+    def test_cache_key_changes_with_brightness(self):
+        """改亮度后必须重算，不能命中 0.25 时代的旧 jpg。"""
+        self.assertNotEqual(
+            fanart_glow.cache_digest("a.jpg", 0.25),
+            fanart_glow.cache_digest("a.jpg", 0.40),
+        )
+        self.assertEqual(
+            fanart_glow.cache_digest("a.jpg", 0.40),
+            fanart_glow.cache_digest("a.jpg", 0.40),
+        )
 
     def test_no_external_helper_dependency(self):
         """防止有人图省事又接回 TMDbHelper。"""
