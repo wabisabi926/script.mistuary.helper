@@ -18,12 +18,12 @@ script.mistuary.helper/
 │   ├── router.py              参数解析（query 必须是最后一个参数）
 │   ├── config.py              读设置 + 发现 Emby 服务器
 │   ├── http.py                urllib 封装，失败返回 Response 不抛异常
-│   ├── cache.py               磁盘缓存（json + mtime，原子写）
+│   ├── cache.py               磁盘缓存（json + mtime，原子写 + 机会式清扫）
 │   ├── log.py                 日志（惰性 import xbmc，绝不打印 token）
 │   ├── i18n.py                本地化（带中文兜底）
 │   ├── emby.py                Emby 客户端 + 结果映射 + 渲染 + 未同步内容 browse 列表
 │   ├── kodi.py                ListItem 构造、窗口属性桥、库内条目定位
-│   ├── douban.py              M2：豆瓣取分
+│   ├── douban.py              M2：豆瓣取分（ok / missing / error 三态）
 │   ├── playlist_sync.py       播放列表补全（事件驱动）
 │   └── file_resume.py         文件播放记录：SQLite 账本（仅 10003）
 ├── resources/
@@ -114,6 +114,9 @@ service.py（常驻）
 | 文件播放记录用自有 SQLite 账本 | 只记 10003、不碰 `MyVideos.db`/原生续播点；高频写留在 WAL 小库，清理媒体库不影响账本 |
 | 原生续播点只读 | 账本没有时读 `Files.GetFileDetails` 兜底，不写回；避免和 Kodi/Emby 的所有权混淆 |
 | 失败**不**缓存 | 一次网络抖动会锁死 5 分钟 |
+| 缓存机会式清扫 | 搜索词是无限的，只靠设置页「清空缓存」的话目录会一直长；`put()` 每 50 次按 mtime 淘汰过期文件，超过 2000 个按最旧淘汰到 80% |
+| 豆瓣结果分三态 | `missing`（豆瓣确实没有这条）长缓存 7 天，`error`（请求失败）只冷却 30 分钟。否则冷门片每半小时把两条通道白打一遍，而且永远得不到结果 |
+| 豆瓣超时 4 秒 | 详情页在皮肤 onload 里同步调用，两条通道串行；实测正常时 0.2~0.4 秒返回 |
 | 缓存写失败静默 | 缓存是优化不是功能，写不进去也要能正常返回结果 |
 | 过滤 Kodi 的 `resume:*` argv | Kodi 21+ 目录调用会额外传 `resume:false`；不丢弃会污染搜索词（0.2.1） |
 | action 模式目录收尾 | `plugin://...?action=...` 有 handle，必须 `endOfDirectory`；`RunScript` 的 handle=-1 不调（0.2.2） |
