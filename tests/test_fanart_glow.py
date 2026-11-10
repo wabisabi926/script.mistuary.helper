@@ -24,7 +24,7 @@ def _solid_source(path, color=(255, 255, 255)):
 
 class BuildGlowTests(unittest.TestCase):
     def test_white_source_is_dimmed_to_brightness(self):
-        """纯白源图压到 0.60 后均值应在 130~175，不能还是白的。"""
+        """纯白源图压到 0.85 后均值应在 195~235，不能还是白的。"""
         try:
             from PIL import Image
         except ImportError:  # pragma: no cover - CI 无 Pillow 时跳过图像断言
@@ -40,8 +40,8 @@ class BuildGlowTests(unittest.TestCase):
         im = Image.open(io.BytesIO(payload)).convert("RGB")
         self.assertEqual(im.size, (640, 360))
         avg = ImageStat.Stat(im.convert("L")).mean[0]
-        self.assertGreater(avg, 130)
-        self.assertLess(avg, 175)
+        self.assertGreater(avg, 195)
+        self.assertLess(avg, 235)
 
     def test_brightness_zero_is_black(self):
         try:
@@ -136,18 +136,18 @@ class PruneTests(unittest.TestCase):
 
 class ConstantsTests(unittest.TestCase):
     def test_brightness_matches_skin_preview(self):
-        """对齐 fuse3 的 diffuse 机制后定 0.60：0.25 太弱，单提亮度也没用。"""
-        self.assertAlmostEqual(fanart_glow.BRIGHTNESS, 0.60)
+        """35% 淡色光下要 0.85 才有可感知的色偏；0.60 在淡色光里几乎看不见。"""
+        self.assertAlmostEqual(fanart_glow.BRIGHTNESS, 0.85)
 
     def test_cache_key_changes_with_brightness(self):
-        """改亮度后必须重算，不能命中 0.25 时代的旧 jpg。"""
+        """改亮度后必须重算，不能命中旧亮度的 jpg。"""
         self.assertNotEqual(
             fanart_glow.cache_digest("a.jpg", 0.25),
-            fanart_glow.cache_digest("a.jpg", 0.60),
+            fanart_glow.cache_digest("a.jpg", 0.85),
         )
         self.assertEqual(
-            fanart_glow.cache_digest("a.jpg", 0.60),
-            fanart_glow.cache_digest("a.jpg", 0.60),
+            fanart_glow.cache_digest("a.jpg", 0.85),
+            fanart_glow.cache_digest("a.jpg", 0.85),
         )
 
     def test_no_external_helper_dependency(self):
