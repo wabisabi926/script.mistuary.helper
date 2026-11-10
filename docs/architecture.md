@@ -29,7 +29,7 @@ script.mistuary.helper/
 ├── resources/
 │   ├── settings.xml
 │   └── language/{en_gb,zh_cn}/strings.po
-└── tests/                     11 个文件，229 项
+└── tests/                     11 个文件，280 项
 ```
 
 ## 数据流

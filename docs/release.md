@@ -14,12 +14,12 @@
 - 不写开发内部内容：根因分析、与其他皮肤 / 插件的对照、实测数据、单测数量、校验清单——
   这些属于提交说明或 `docs/`，不进 changelog。
 - 术语用 Kodi 的叫法：fanart（剧照）、addon、window、setting，不造新词、不写内部属性名。
-- 参照范例：本仓库 `0.4.0` 段；皮肤侧参照 `skin.mistuary` 的 `2.1.1` 段。
+- 参照范例：本仓库 `0.5.1` 段；皮肤侧参照 `skin.mistuary` 的 `2.2.1` 段。
 
 ## 2. 发版前自检
 
 ```bash
-python -m unittest discover -s tests -p 'test_*.py'   # 当前 229 项
+python -m unittest discover -s tests -p 'test_*.py'   # 当前 280 项
 python -m compileall -q default.py lib
 ```
 
@@ -107,5 +107,7 @@ git ls-remote --tags origin | tail -5
 | 0.3.10 | 搜索剧集改走 Kodi 媒体库 |
 | 0.3.11 | 未同步剧集进入插件自己的季/集列表 |
 | 0.4.0 | 与 0.3.11 功能相同，仅重新编号发布（0.3.x 尾巴收口） |
+| 0.5.0 | 背景剧照色光底（真高斯模糊） |
+| 0.5.1 | 色光亮度 0.60 → 0.85，配合皮肤 2.2.1 的 35% 淡色光 |
 
-`0.4.0` 已发布，Release 由 CI 在 push 时自动创建。
+`0.5.1` 已发布，Release 由 CI 在 push 时自动创建。
