@@ -305,6 +305,65 @@ class SearchPageTest(unittest.TestCase):
         self.assertEqual(title_count, 1)
 
 
+class DoubanRatingsKeysTest(unittest.TestCase):
+    def setUp(self):
+        patcher_get = mock.patch.object(emby.cache, "get", return_value=None)
+        patcher_put = mock.patch.object(emby.cache, "put", return_value=True)
+        self.mock_get = patcher_get.start()
+        self.mock_put = patcher_put.start()
+        self.addCleanup(patcher_get.stop)
+        self.addCleanup(patcher_put.stop)
+
+    def test_maps_multi_keys_and_legacy_imdb(self):
+        payload = {"Ratings": [
+            {
+                "Key": "douban:1292052",
+                "KeyType": "douban",
+                "Imdb": "tt0111161",
+                "ItemId": "1",
+                "SubjectId": "1292052",
+                "Rating": 9.7,
+                "Votes": 100,
+                "Applied": True,
+            },
+            {
+                "Imdb": "tt0068646",
+                "ItemId": "2",
+                "SubjectId": "1292053",
+                "Rating": 9.2,
+                "Votes": 50,
+            },
+        ]}
+
+        captured = {}
+
+        def fake_get_json(url, headers=None, timeout=6):
+            captured["url"] = url
+            return payload, http.Response(ok=True, status=200)
+
+        with mock.patch.object(emby.http, "get_json", side_effect=fake_get_json):
+            rows = emby.douban_ratings_by_keys(FakeServer(), ["douban:1292052", "tt0068646"])
+
+        self.assertIn("Douban/RatingsByImdb", captured["url"])
+        self.assertEqual(9.7, rows["douban:1292052"]["rating"])
+        self.assertEqual("douban", rows["douban:1292052"]["key_type"])
+        self.assertEqual("tt0111161", rows["douban:1292052"]["imdb"])
+        # 旧版插件没有 Key 字段时按 Imdb 回退
+        self.assertEqual(9.2, rows["tt0068646"]["rating"])
+
+    def test_http_failure_returns_none(self):
+        with mock.patch.object(emby.http, "get_json",
+                               return_value=(None, http.Response(ok=False, status=401))):
+            rows = emby.douban_ratings_by_keys(FakeServer(), ["douban:1292052"])
+        self.assertIsNone(rows)
+
+    def test_empty_keys_skip_http(self):
+        with mock.patch.object(emby.http, "get_json") as fake:
+            rows = emby.douban_ratings_by_keys(FakeServer(), ["", "  "])
+        fake.assert_not_called()
+        self.assertEqual({}, rows)
+
+
 class HumanErrorTest(unittest.TestCase):
     def test_401_message_mentions_reconnect(self):
         text = emby._human_error(emby.EmbyError("x", 401))

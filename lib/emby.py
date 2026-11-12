@@ -371,10 +371,11 @@ def test_connection(server) -> tuple:
     return True, ("%s %s" % (name, version)).strip()
 
 
-def douban_ratings_by_imdb(server, imdbs, ttl: int = 24 * 3600):
-    """按 IMDb 批量取豆瓣分（StrmAssistant 的 `/Douban/RatingsByImdb`）。
+def douban_ratings_by_keys(server, keys, ttl: int = 24 * 3600):
+    """按 IMDb / TMDb / 豆瓣键批量取豆瓣分（StrmAssistant 的 `/Douban/RatingsByImdb`）。
 
-    返回 `{imdb_lower: {"rating", "votes", "applied", "item_id", "subject_id"}}`。
+    支持 `tt...`、`tmdb:123`、`douban:123`；
+    返回 `{canonical_key: {"rating", "votes", "applied", "item_id", "subject_id", "imdb", "key_type"}}`。
 
     - **请求失败返回 None**：调用方据此回退直连豆瓣；
     - 返回空 dict 表示请求成功但 Emby 一条都不认识（可据此判断要不要回退）；
@@ -385,15 +386,15 @@ def douban_ratings_by_imdb(server, imdbs, ttl: int = 24 * 3600):
     也不必跟着直连的 30 天一起变长——StrmAssistant 自己的同步也有滞后，
     留 1 天能及时跟上。
     """
-    wanted = sorted({(i or "").strip().lower() for i in imdbs if (i or "").strip()})
+    wanted = sorted({(k or "").strip().lower() for k in keys if (k or "").strip()})
     if not wanted:
         return {}
 
     result = {}
     for start in range(0, len(wanted), RATINGS_BATCH):
         batch = wanted[start:start + RATINGS_BATCH]
-        key = cache.make_key("emby_douban", server.server_id, *batch)
-        cached = cache.get(key, ttl)
+        cache_key = cache.make_key("emby_douban", server.server_id, *batch)
+        cached = cache.get(cache_key, ttl)
         if cached is not None:
             result.update(cached)
             continue
@@ -401,26 +402,34 @@ def douban_ratings_by_imdb(server, imdbs, ttl: int = 24 * 3600):
         url = http.build_url(server.base_url, RATINGS_BY_IMDB_PATH, {"Ids": ",".join(batch)})
         payload, resp = http.get_json(url, headers={"X-Emby-Token": server.token})
         if payload is None:
-            log.error("douban ratings by imdb failed: status=%s error=%s" % (resp.status, resp.error))
+            log.error("douban ratings by keys failed: status=%s error=%s" % (resp.status, resp.error))
             return None
 
         rows = {}
         for row in payload.get("Ratings") or []:
             imdb = (row.get("Imdb") or "").strip().lower()
-            if not imdb:
+            key = (row.get("Key") or "").strip().lower() or imdb
+            if not key:
                 continue
-            rows[imdb] = {
+            rows[key] = {
                 "rating": row.get("Rating"),
                 "votes": row.get("Votes") or 0,
                 "applied": bool(row.get("Applied")),
                 "item_id": row.get("ItemId") or "",
                 "subject_id": row.get("SubjectId") or "",
+                "imdb": imdb,
+                "key_type": (row.get("KeyType") or "").strip().lower(),
             }
 
-        cache.put(key, rows)
+        cache.put(cache_key, rows)
         result.update(rows)
 
     return result
+
+
+def douban_ratings_by_imdb(server, imdbs, ttl: int = 24 * 3600):
+    """兼容旧调用：参数为 IMDb 列表，返回仍按 IMDb 小写键索引。"""
+    return douban_ratings_by_keys(server, imdbs, ttl)
 
 
 def _human_error(exc: EmbyError) -> str:

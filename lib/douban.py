@@ -260,7 +260,7 @@ def _write(status: str, rating: str = "", votes: str = "", fetched: str = "",
     kodi.set_home_property(PROP_SOURCE, source)
 
 
-def _emby_lookup(imdb_id: str):
+def _emby_lookup(imdb_id: str, douban_id: str = ""):
     """问 StrmAssistant 要这条的豆瓣分。
 
     - 返回 dict：Emby 认识这条（`rating` 可能为 None = 有条目但没豆瓣分）
@@ -273,15 +273,29 @@ def _emby_lookup(imdb_id: str):
 
     from lib import emby
 
+    keys = []
+    if imdb_id:
+        keys.append(imdb_id)
+    if douban_id:
+        keys.append("douban:" + douban_id)
+    if not keys:
+        return None
+
     try:
-        data = emby.douban_ratings_by_imdb(server, [imdb_id])
+        data = emby.douban_ratings_by_keys(server, keys)
     except Exception as exc:  # noqa: BLE001 - 网络/解析异常一律回退
         log.debug("emby douban lookup failed: %s" % exc)
         return None
 
     if data is None:
         return None
-    return data.get(imdb_id.lower())
+
+    # 豆瓣 ID 是精确键；没有时再退回 IMDb。
+    if douban_id:
+        hit = data.get(("douban:" + douban_id).lower())
+        if hit is not None:
+            return hit
+    return data.get((imdb_id or "").lower())
 
 
 def resolve_imdb(req) -> str:
@@ -330,8 +344,8 @@ def run_action(req) -> None:
 
     # 优先问 Emby（StrmAssistant）：数值与应用内主评分同源，且不额外触发豆瓣请求。
     # 返回 None 表示 Emby 不认识这条/不可用 → 继续走下面的直连兜底。
-    if imdb_id and settings.get("douban_prefer_emby", True):
-        hit = _emby_lookup(imdb_id)
+    if (imdb_id or douban_id) and settings.get("douban_prefer_emby", True):
+        hit = _emby_lookup(imdb_id, douban_id)
         if hit is not None:
             rating = hit.get("rating")
             if rating is None:

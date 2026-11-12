@@ -224,6 +224,16 @@ class RunActionTest(unittest.TestCase):
         fetch.assert_not_called()
         self.assertEqual(self.written[douban.PROP_STATUS], "missing")
 
+    def test_emby_lookup_uses_douban_key_without_imdb(self):
+        with mock.patch.object(douban.config, "read_settings", return_value={}), \
+             mock.patch.object(douban.config, "ratings_server", return_value=object()), \
+             mock.patch("lib.emby.douban_ratings_by_keys",
+                        return_value={"douban:1292052": {"rating": 9.0}}) as lookup:
+            hit = douban._emby_lookup("", "1292052")
+
+        self.assertEqual(9.0, hit["rating"])
+        self.assertEqual(["douban:1292052"], lookup.call_args[0][1])
+
     def test_title_fallback_when_no_imdb(self):
         with mock.patch.object(douban, "resolve_imdb", return_value=""), \
              mock.patch.object(douban.kodi, "get_home_property",
