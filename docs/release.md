@@ -19,7 +19,7 @@
 ## 2. 发版前自检
 
 ```bash
-python -m unittest discover -s tests -p 'test_*.py'   # 当前 280 项
+python -m unittest discover -s tests -p 'test_*.py'   # 当前 284 项
 python -m compileall -q default.py lib
 ```
 
@@ -109,5 +109,6 @@ git ls-remote --tags origin | tail -5
 | 0.4.0 | 与 0.3.11 功能相同，仅重新编号发布（0.3.x 尾巴收口） |
 | 0.5.0 | 背景剧照色光底（真高斯模糊） |
 | 0.5.1 | 色光亮度 0.60 → 0.85，配合皮肤 2.2.1 的 35% 淡色光 |
+| 0.5.2 | 无 IMDb 时用豆瓣 ID 查询 Emby 缓存，旧 IMDb 调用保持兼容 |
 
-`0.5.1` 已发布，Release 由 CI 在 push 时自动创建。
+`0.5.2` 已发布，Release 由 CI 在 push 时自动创建。
