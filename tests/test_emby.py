@@ -11,6 +11,8 @@ from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from urllib.parse import parse_qs, urlparse  # noqa: E402
+
 from lib import emby, http  # noqa: E402
 
 
@@ -251,10 +253,11 @@ class SearchPageTest(unittest.TestCase):
     def _fake(self, url, headers=None, timeout=6):
         self.calls.append(url)
         ok = http.Response(ok=True, status=200)
+        query = parse_qs(urlparse(url).query).get("searchTerm", [""])[0]
         if "emby/Persons" in url:
-            return {"Items": [{"Id": "p1"}]}, ok
+            return {"Items": [{"Id": "p1", "Name": query + " 演员"}]}, ok
         if "emby/Genres" in url:
-            return {"Items": [{"Id": "g1"}]}, ok
+            return {"Items": [{"Id": "g1", "Name": query}]}, ok
         if "PersonIds=" in url:
             return {"Items": [RAW_ITEM]}, ok
         if "GenreIds=" in url:
@@ -310,6 +313,26 @@ class SearchPageTest(unittest.TestCase):
                 self.assertEqual(title_count, 1)
                 self.assertTrue(any("emby/Persons" in u for u in self.calls))
                 self.assertTrue(any("emby/Genres" in u for u in self.calls))
+
+    def test_person_name_must_contain_query(self):
+        """Emby 的 searchTerm 是模糊匹配：'诺兰' 命中'诺埃尔·莱斯特·兰兹'时必须丢掉。"""
+        def fake(url, headers=None, timeout=6):
+            self.calls.append(url)
+            ok = http.Response(ok=True, status=200)
+            if "emby/Persons" in url:
+                return {"Items": [{"Id": "p9", "Name": "诺埃尔·莱斯特·兰兹"}]}, ok
+            if "emby/Genres" in url:
+                return {"Items": []}, ok
+            if "PersonIds=" in url:
+                return {"Items": [dict(RAW_ITEM, Id="wrong-person-item")]}, ok
+            return {"Items": [RAW_ITEM]}, ok
+
+        with mock.patch.object(emby.http, "get_json", side_effect=fake):
+            items, title_count = emby.search_page(FakeServer(), "诺兰", "movies")
+
+        self.assertEqual([i["id"] for i in items], ["item-1"])
+        self.assertEqual(title_count, 1)
+        self.assertFalse(any("PersonIds=" in u for u in self.calls))
 
     def test_single_character_query_does_not_expand(self):
         with mock.patch.object(emby.http, "get_json", side_effect=self._fake):

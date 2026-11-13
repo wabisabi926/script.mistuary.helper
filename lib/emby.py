@@ -256,18 +256,28 @@ def _is_expandable_query(query: str) -> bool:
     return " " in query or len(query) >= EXTRA_ASCII_MIN_WORD
 
 
+def _name_matches(name: str, query: str) -> bool:
+    """Emby 的 searchTerm 是模糊匹配：`诺兰` 会命中 `诺埃尔·莱斯特·兰兹`。
+    只保留 query 真的是 Name 子串的条目，避免把不相干的人/类型并进结果。"""
+    name = (name or "").strip().casefold()
+    query = (query or "").strip().casefold()
+    return bool(name and query and query in name)
+
+
 def _lookup_ids(server, path: str, query: str, limit: int) -> list:
     """查 Persons / Genres 的 Id 列表；失败返回空（扩展失败不能拖垮标题搜索）。"""
     url = http.build_url(server.base_url, path, {
         "searchTerm": query,
         "Limit": limit,
-        "Fields": "Id",
+        "Fields": "Id,Name",
     })
     payload, resp = http.get_json(url, headers={"X-Emby-Token": server.token})
     if payload is None:
         log.debug("extra lookup %s failed: status=%s" % (path, resp.status))
         return []
-    return [item.get("Id") for item in payload.get("Items") or [] if item.get("Id")]
+    # searchTerm 只保证模糊命中（诺兰 → 诺埃尔·莱斯特·兰兹），本地再按 Name 收一遍
+    return [item.get("Id") for item in payload.get("Items") or []
+            if item.get("Id") and _name_matches(item.get("Name"), query)]
 
 
 def _items_by_ids(server, param: str, ids: list, item_type: str) -> list:
