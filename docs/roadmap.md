@@ -203,7 +203,7 @@ action 目录调用未收尾，两个问题都已修复并发布。
 
 ## M2 豆瓣评分
 
-**交付**：`lib/douban.py` 双通道取分（legacy + frodo 签名）、7 天缓存、失败退避、
+**交付**：`lib/douban.py` 双通道取分（legacy + frodo 签名）、30 天缓存、失败退避、
 写 `Window(home)` 的 `Mistuary.Rating.{Douban,Votes,FetchedAt,Status}`。
 
 **已确认的产品规则**（2026-10-30）：

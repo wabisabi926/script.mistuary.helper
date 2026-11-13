@@ -39,7 +39,7 @@
 | 中文标题 / 原名 / 全拼 / 首字母搜索 | ✅ | Emby `/Items?searchTerm=`，电影 / 剧集两个页签 |
 | 搜索结果分页 | ✅ | 满一页追加「加载更多」 |
 | 已看 / 播放进度 | ✅ | 写 `Overlay` / `percentplayed` |
-| 豆瓣评分 | ✅ | IMDb 优先，dbid 反查，标题 + 年份兜底；7 天缓存 |
+| 豆瓣评分 | ✅ | IMDb 优先，dbid 反查，标题 + 年份兜底；成功缓存 30 天（无分 3 天复核，失败 30 分钟） |
 | action 模式 | ✅ 0.2.2 | `plugin://...?action=...` 会补 `endOfDirectory`；`RunScript` handle=-1 不调 |
 | 演员 / 导演 / 类型 | ✅ 0.3.3 | 仅非 ASCII、≥2 字；纯字母按标题处理 |
 | 搜索：剧集跳转 | ✅ 0.3.10 | 按标题 + tmdb/tvdb 在 Kodi 库里定位，跳 `videodb://tvshows/titles/<id>/` |
