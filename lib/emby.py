@@ -233,9 +233,15 @@ def search(server, query: str, media_type: str, limit: int = 100, offset: int = 
     return items
 
 
-# 非 ASCII 查询（中文名 / 类型词）才做人员与类型并集；纯字母走标题，避免 JW 之类炸出
-# 一堆人的全部作品。单字查询也不扩展，噪音和请求量都不划算。
+# 并入演员作品 / 类型作品的判据：
+# - 非 ASCII（中文人名、类型词）≥2 字就扩展；
+# - 纯 ASCII 里 2–4 位连写一律看成拼音首字母（RZD / JW），**不扩展** ——
+#   拿短字母查 Persons/Genres 会炸出一堆人的全部作品（单字 Z 曾命中 742 部里的 238 部）；
+# - 纯 ASCII 只有「含空格」（Tom Hanks）或「≥5 位」（Nolan / sci-fi）才当真词扩展，
+#   这样英文人名与类型词也能搜到作品。全拼（rangzidanfei）同样会走这条，
+#   但 Persons/Genres 命中为空，只是多 4 个请求；只在第一页做且结果有缓存。
 EXTRA_MIN_QUERY = 2
+EXTRA_ASCII_MIN_WORD = 5
 EXTRA_PERSON_LIMIT = 5
 EXTRA_GENRE_LIMIT = 5
 EXTRA_ITEM_LIMIT = 100
@@ -243,7 +249,11 @@ EXTRA_ITEM_LIMIT = 100
 
 def _is_expandable_query(query: str) -> bool:
     query = (query or "").strip()
-    return len(query) >= EXTRA_MIN_QUERY and any(ord(ch) > 127 for ch in query)
+    if len(query) < EXTRA_MIN_QUERY:
+        return False
+    if any(ord(ch) > 127 for ch in query):
+        return True
+    return " " in query or len(query) >= EXTRA_ASCII_MIN_WORD
 
 
 def _lookup_ids(server, path: str, query: str, limit: int) -> list:
@@ -284,7 +294,7 @@ def search_page(server, query: str, media_type: str, limit: int = 100, offset: i
                 ttl: int = 300) -> tuple:
     """搜索一页：返回 (条目列表, 标题命中数)。
 
-    - 标题结果照旧分页；非 ASCII 查询在**第一页**额外并入演员作品与类型作品；
+    - 标题结果照旧分页；扩展查询（中文、英文人名/类型词）在**第一页**额外并入演员作品与类型作品；
     - 第二页起只返回标题结果（offset>0 不再扩展）；
     - 标题命中数是「加载更多」的依据，避免并入的额外条目把 offset 算错。
     """

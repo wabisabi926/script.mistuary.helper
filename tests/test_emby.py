@@ -237,7 +237,7 @@ class SearchTest(unittest.TestCase):
 
 
 class SearchPageTest(unittest.TestCase):
-    """M1d：非 ASCII 查询并入演员作品与类型作品；纯字母与分页不扩展。"""
+    """M1d：第一页并入演员作品与类型作品；拼音首字母和分页不扩展。"""
 
     def setUp(self):
         patcher_get = mock.patch.object(emby.cache, "get", return_value=None)
@@ -278,6 +278,38 @@ class SearchPageTest(unittest.TestCase):
         self.assertEqual(title_count, 1)
         self.assertEqual(len(self.calls), 1)
         self.assertNotIn("emby/Persons", self.calls[0])
+
+    def test_expandable_query_matrix(self):
+        """2–4 位 ASCII 连写是拼音首字母，不扩展；含空格或 ≥5 位当真词扩展。"""
+        cases = {
+            "": False,
+            "Z": False,            # 单字：Z 曾命中 742 部里的 238 部
+            "科": False,
+            "JW": False,
+            "RZD": False,
+            "toy": False,
+            "Nolan": True,         # 5 位英文人名
+            "sci-fi": True,        # 类型词
+            "Tom Hanks": True,     # 含空格的英文人名
+            "rangzidanfei": True,  # 全拼：会扩展，但 Persons/Genres 命中为空
+            "科幻": True,
+            "克里斯托弗": True,
+        }
+        for query, expected in cases.items():
+            with self.subTest(query=query):
+                self.assertEqual(emby._is_expandable_query(query), expected)
+
+    def test_ascii_person_name_expands(self):
+        """英文人名也要能带出演员作品（原判据只认非 ASCII，这条一直够不着）。"""
+        for query in ("Tom Hanks", "Nolan"):
+            with self.subTest(query=query):
+                self.calls.clear()
+                with mock.patch.object(emby.http, "get_json", side_effect=self._fake):
+                    items, title_count = emby.search_page(FakeServer(), query, "movies")
+                self.assertEqual([i["id"] for i in items], ["item-1", "item-2"])
+                self.assertEqual(title_count, 1)
+                self.assertTrue(any("emby/Persons" in u for u in self.calls))
+                self.assertTrue(any("emby/Genres" in u for u in self.calls))
 
     def test_single_character_query_does_not_expand(self):
         with mock.patch.object(emby.http, "get_json", side_effect=self._fake):
