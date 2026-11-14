@@ -1,4 +1,4 @@
-# 交接说明（Mistuary Helper 0.5.2 已发布）
+# 交接说明（Mistuary Helper 0.5.3 已发布）
 
 > 接手先读这份，再看 `contract.md`（皮肤接口）和 `roadmap.md`（还剩什么）。
 > 本文只讲现状、已知问题、验证入口和发版，不讲历史演进。
@@ -6,10 +6,10 @@
 ## 1. 一句话现状
 
 `script.mistuary.helper` 是 Mistuary 皮肤的**必需**配套插件（皮肤 `addon.xml` 硬依赖），
-当前发布 **0.5.2**，284 项单测全绿，已发布 `v0.2.0` / `v0.2.1` / `v0.2.2` / `v0.3.2` / `v0.3.4` / `v0.3.5` /
-`v0.3.6` / `v0.3.7` / `v0.3.8` / `v0.3.10` / `v0.3.11` / `v0.4.0` / `v0.5.0` / `v0.5.1` / `v0.5.2`（`v0.3.6` 只修发布包漏带 `service.py`；
+当前发布 **0.5.3**，287 项单测全绿，已发布 `v0.2.0` / `v0.2.1` / `v0.2.2` / `v0.3.2` / `v0.3.4` / `v0.3.5` /
+`v0.3.6` / `v0.3.7` / `v0.3.8` / `v0.3.10` / `v0.3.11` / `v0.4.0` / `v0.5.0` / `v0.5.1` / `v0.5.2` / `v0.5.3`（`v0.3.6` 只修发布包漏带 `service.py`；
 `v0.4.0` 与 `v0.3.11` 功能相同，仅重新编号；`v0.5.1` 只把色光亮度提到 0.85；
-`v0.5.2` 增加豆瓣 ID 桥接查询）。
+`v0.5.2` 增加豆瓣 ID 桥接查询；`v0.5.3` 修服务端搜索的英文人名扩展与同名误命中）。
 文件播放记录随 **0.3.7** 发布，见 §2.5；0.3.8 只调插件封面文字；0.3.9 加媒体库封面同步与按目录补全默认开；
 0.3.10 搜索剧集改走 Kodi 媒体库；0.3.11 让库里没有的剧集可直接浏览（§2.7）。
 搜索和豆瓣评分主路径已接在皮肤 `main`，**M1c 已于 2026-10-30 实机验收通过**（含播放）；
@@ -82,7 +82,7 @@
   120 秒内路径不同的自动连播不弹窗，同一路径重开仍弹窗。窗口缺失时回退原生 yes/no（No = 继续播放）。
 - 开关：`file_resume`（默认开），皮肤设置「播放」页可切；`skin_bridge` 暴露
   `Mistuary.Helper.FileResume`。
-- 单测：`tests/test_file_resume.py` 全覆盖；全仓共 284 项。
+- 单测：`tests/test_file_resume.py` 全覆盖；全仓共 287 项。
 - **实机验证（2026-11-04）**：`.strm` 播放到 5:00 停止后账本写入 300s；
   再次播放 1.0 秒弹出 1115 紧凑弹窗，默认「继续播放」，回车跳到 5:19；
   10003 焦点行属性 `HasResume / Percent / PercentKey` = true / 7 / 007。
@@ -207,7 +207,7 @@ Kodi 日志报 `CGUIMediaWindow::GetDirectory(...) failed`。
 
 ```bash
 cd D:/下载/AI/script.mistuary.helper
-python -m unittest discover -s tests -p 'test_*.py'   # 284 项
+python -m unittest discover -s tests -p 'test_*.py'   # 287 项
 python -m compileall -q default.py lib
 ```
 
@@ -237,7 +237,7 @@ push 到 `main` 且版本号变化时 CI 自动打包。不要手工打 zip。
 | `lib/cache.py` | 磁盘缓存（不含 token） |
 | `lib/library_icons.py` | 媒体库封面同步：Views → 本地 PNG（缺封面写透明占位）+ manifest v2 |
 | `lib/log.py` / `lib/i18n.py` | 日志 / 本地化 |
-| `tests/` | 284 项单测，HTTP 全 mock |
+| `tests/` | 287 项单测，HTTP 全 mock |
 
 ## 8. 安全与隐私
 
