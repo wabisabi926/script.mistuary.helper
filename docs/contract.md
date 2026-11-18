@@ -94,6 +94,40 @@ RunScript(script.mistuary.helper,action=rating,type=movie,dbid=<Kodi 库 id>)
 
 `imdb` 是主路径（Emby 动态条目没有 DBID），`dbid` 只用于本地库反查 `uniqueid`。
 
+### 2.3 相似影片（返回目录，皮肤入口尚未接入）
+
+```
+plugin://script.mistuary.helper/?mode=similar&type=movie&dbid=<Kodi 库 id>
+plugin://script.mistuary.helper/?mode=similar&type=tvshow&dbid=<Kodi 库 id>
+```
+
+| 参数 | 值 | 说明 |
+|---|---|---|
+| `mode` | `similar` | 必填 |
+| `type` | `movie` / `tvshow` | 必填，用于查 E4K 映射表 |
+| `dbid` | Kodi 库 id | 必填（Emby 动态条目没有 DBID 时传 `id`） |
+| `id` | Emby item id | 可选，皮肤能从 E4K 属性拿到时优先使用 |
+
+**取 Emby id 的顺序**：
+
+1. `id`（皮肤直接给）；
+2. E4K 的 `emby_<server>.db`：`Movie` / `Series` 表的 `KodiId → EmbyId`；
+3. 按 Kodi 标题 + 年份在 Emby 搜索，要求标题完全一致；仍不唯一就返回空。
+
+拿到 id 后请求 `/{base}/Items/{id}/Similar?Limit=30`，缓存 1 小时。
+条目复用搜索页的 `_list_item`（海报、背景、技术标识、已看进度）。
+
+**落点**：
+
+| 类型 | 点击后 |
+|---|---|
+| 已同步剧集 | `videodb://tvshows/titles/<dbid>/` |
+| 未同步剧集 / 合集 | 插件自己的 `mode=browse` 子列表 |
+| 电影 / 单集 | Emby 插件的 `mode=play` 直接播放 |
+
+空结果在列表里放一条 `#32156`「没有找到相似内容」，不弹错误框。
+皮肤侧还没接入口；将来在详情页加按钮/菜单项时直接用上面的 URL 即可。
+
 ## 三、插件写什么
 
 ### 3.1 窗口属性（豆瓣评分，M2，0.2.0）

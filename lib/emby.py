@@ -578,3 +578,137 @@ def render_browse(handle: int, base_url: str, req) -> bool:
     if not items:
         kodi.add_notice(handle, base_url, i18n.t(32155), playable=False)
     return True
+
+
+SIMILAR_LIMIT = 30
+SIMILAR_TTL = 3600
+
+
+def similar(server, item_id: str, limit: int = SIMILAR_LIMIT,
+            ttl: int = SIMILAR_TTL) -> list[dict]:
+    """Emby「相似影片」：/Items/{id}/Similar。
+
+    返回规范化后的条目；失败抛 EmbyError，由 render_similar 翻成人话。
+    结果缓存 1 小时：相似列表不随观看状态变化，没必要每次开页都打服务端。
+    """
+    item_id = (item_id or "").strip()
+    if not item_id:
+        return []
+
+    key = cache.make_key("similar_v1", server.server_id, item_id, limit)
+    cached = cache.get(key, ttl)
+    if cached is not None:
+        log.debug("similar cache hit: %s" % item_id)
+        return cached
+
+    url = http.build_url(server.base_url, "emby/Items/%s/Similar" % item_id, {
+        "Limit": limit,
+        "Fields": FIELDS,
+        "ImageTypeLimit": 1,
+        "EnableImageTypes": "Primary,Backdrop",
+        "UserId": server.user_id,
+    })
+
+    payload, resp = http.get_json(url, headers={"X-Emby-Token": server.token})
+    if payload is None:
+        log.error("similar failed: status=%s error=%s" % (resp.status, resp.error))
+        raise EmbyError(resp.error or "request failed", resp.status)
+
+    # Emby 通常返回 {"Items": [...]}；少数版本直接给数组，两种都认。
+    raw_items = payload.get("Items") if isinstance(payload, dict) else payload
+    items = [
+        normalize(item)
+        for item in (raw_items or [])
+        if isinstance(item, dict) and item.get("Id")
+        and str(item.get("Id")) != item_id
+    ]
+    cache.put(key, items)
+    log.debug("similar %s -> %d items" % (item_id, len(items)))
+    return items
+
+
+def resolve_emby_id(server, req) -> str:
+    """把皮肤给的 DBID 换成 Emby item id。
+
+    优先级：皮肤直接给的 Emby id → E4K 映射库 → 按标题搜索。
+    """
+    from lib import kodi
+
+    if req.item_id:
+        return req.item_id.strip()
+
+    emby_id = kodi.emby_item_id(req.dbid, req.type, server.server_id)
+    if emby_id:
+        return emby_id
+
+    meta = kodi.video_meta(req.dbid)
+    title = (meta.get("title") or req.title or "").strip()
+    year = meta.get("year") or req.year
+    if not title:
+        return ""
+
+    media_type = "shows" if (req.type or "").strip().lower() in (
+        "tvshow", "tvshows", "shows", "series") else "movies"
+    try:
+        results = search(server, title, media_type, limit=10, ttl=300)
+    except EmbyError:
+        return ""
+
+    title_cf = title.casefold()
+    exact = [x for x in results if (x.get("name") or "").strip().casefold() == title_cf]
+    if year:
+        matched = [x for x in exact if str(x.get("year") or "") == str(year)]
+        if matched:
+            exact = matched
+    if len(exact) == 1:
+        return exact[0]["id"]
+    if not exact and len(results) == 1:
+        return results[0]["id"]
+    return ""
+
+
+def _similar_target(server, base_url: str, item: dict) -> str:
+    """相似结果的落点：已同步剧集回 Kodi 库，电影/单集直接播，未同步进 browse。"""
+    from lib import kodi, router
+
+    if item.get("type") == "Series":
+        dbid = kodi.library_id_by_provider(
+            "tvshows", item.get("name", ""), item.get("tmdb", ""), item.get("tvdb", ""))
+        return "videodb://tvshows/titles/%d/" % dbid if dbid \
+            else router.build_browse_url(base_url, item["id"])
+    if item.get("is_folder"):
+        return router.build_browse_url(base_url, item["id"])
+    return play_url(server, item["id"])
+
+
+def render_similar(handle: int, base_url: str, req) -> bool:
+    """相似影片目录入口。返回 True 表示目录可正常结束。"""
+    import xbmcplugin
+
+    from lib import kodi
+
+    settings = config.read_settings()
+    server = config.find_server(settings.get("server_id", ""))
+    if server is None:
+        kodi.add_notice(handle, base_url, i18n.t(32021))
+        return True
+
+    emby_id = resolve_emby_id(server, req)
+    if not emby_id:
+        kodi.add_notice(handle, base_url, i18n.t(32156), playable=False)
+        return True
+
+    try:
+        items = similar(server, emby_id)
+    except EmbyError as exc:
+        kodi.add_notice(handle, base_url, _human_error(exc))
+        return True
+
+    for item in items:
+        target = _similar_target(server, base_url, item)
+        xbmcplugin.addDirectoryItem(handle, target, _list_item(server, item),
+                                    isFolder=item["is_folder"])
+
+    if not items:
+        kodi.add_notice(handle, base_url, i18n.t(32156), playable=False)
+    return True

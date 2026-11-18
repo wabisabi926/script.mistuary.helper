@@ -49,6 +49,14 @@ def main():
         xbmcplugin.endOfDirectory(HANDLE, succeeded=True, cacheToDisc=False)
         return
 
+    if req.mode == "similar":
+        # 相似影片：皮肤传 DBID（或 Emby id），这里返回一个可播放目录。
+        from lib import emby
+
+        emby.render_similar(HANDLE, BASE_URL, req)
+        xbmcplugin.endOfDirectory(HANDLE, succeeded=True, cacheToDisc=False)
+        return
+
     if req.action == "rating":
         # M2：写豆瓣评分窗口属性。
         from lib import douban

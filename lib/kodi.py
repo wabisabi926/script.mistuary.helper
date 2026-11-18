@@ -327,6 +327,129 @@ def database_path(prefix: str = "MyVideos") -> str:
         return ""
 
 
+EMBY_TABLE = {
+    "movie": "Movie",
+    "movies": "Movie",
+    "tvshow": "Series",
+    "tvshows": "Series",
+    "shows": "Series",
+    "series": "Series",
+    "episode": "Episode",
+    "episodes": "Episode",
+    "season": "Season",
+}
+
+
+def emby_database_path(server_id: str = "", folder: str = "") -> str:
+    """E4K 的映射库 `emby_<server_id>.db`；找不到就退回最新的 `emby_*.db`。
+
+    `folder` 只给单测用；生产环境走 `special://database/`。
+    """
+    try:
+        import os
+
+        if not folder:
+            import xbmcvfs
+
+            folder = xbmcvfs.translatePath("special://database/")
+        sid = (server_id or "").strip()
+        if sid:
+            exact = os.path.join(folder, "emby_%s.db" % sid)
+            if os.path.isfile(exact):
+                return exact
+
+        best, best_mtime = "", -1.0
+        for name in os.listdir(folder):
+            if not (name.startswith("emby_") and name.endswith(".db")):
+                continue
+            path = os.path.join(folder, name)
+            try:
+                mtime = os.path.getmtime(path)
+            except OSError:
+                continue
+            if mtime > best_mtime:
+                best, best_mtime = path, mtime
+        return best
+    except Exception:  # noqa: BLE001 - 没有 Kodi / 目录不存在都按空处理
+        return ""
+
+
+def emby_item_id(dbid, kind: str = "movie", server_id: str = "",
+                 db_path: str = "") -> str:
+    """Kodi DBID → E4K 的 Emby item id。查不到返回空串。
+
+    E4K 把映射写在自己的 `emby_<server>.db`：Movie / Series / Episode / Season
+    表里各有一列 `KodiId` 和 `EmbyId`。比按标题去 Emby 搜索稳，也不会因为
+    同名/译名不同而认错。
+    """
+    try:
+        dbid = int(dbid)
+    except (TypeError, ValueError):
+        return ""
+    if dbid <= 0:
+        return ""
+
+    table = EMBY_TABLE.get((kind or "").strip().lower())
+    if not table:
+        return ""
+
+    path = db_path or emby_database_path(server_id)
+    if not path:
+        return ""
+
+    try:
+        import sqlite3
+
+        uri = "file:%s?mode=ro" % path.replace("\\", "/")
+        con = sqlite3.connect(uri, uri=True, timeout=2)
+        try:
+            row = con.execute(
+                "SELECT EmbyId FROM %s WHERE KodiId=? LIMIT 1" % table, (dbid,)
+            ).fetchone()
+        finally:
+            con.close()
+        return str(row[0]).strip() if row and row[0] is not None else ""
+    except Exception:  # noqa: BLE001 - 库被锁 / 表不存在 / 旧版 E4K 都按空处理
+        return ""
+
+
+def video_meta(dbid) -> dict:
+    """取 Kodi 条目的标题/年份/uniqueid；失败返回 {}。
+
+    只在 E4K 映射查不到时用于回退 Emby 标题搜索。
+    """
+    try:
+        dbid = int(dbid)
+    except (TypeError, ValueError):
+        return {}
+    if dbid <= 0:
+        return {}
+    try:
+        import json
+        import xbmc
+
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "VideoLibrary.GetItemDetails",
+            "params": {
+                "itemid": dbid,
+                "properties": ["title", "year", "uniqueid"],
+            },
+        }
+        raw = xbmc.executeJSONRPC(json.dumps(payload))
+        details = (((json.loads(raw).get("result") or {}).get("itemdetails")) or {})
+        if not details:
+            return {}
+        return {
+            "title": details.get("title") or "",
+            "year": details.get("year") or 0,
+            "uniqueid": details.get("uniqueid") or {},
+        }
+    except Exception:  # noqa: BLE001
+        return {}
+
+
 def refresh_ui() -> None:
     """让界面重读数据库（评分行改动后调用）。
 

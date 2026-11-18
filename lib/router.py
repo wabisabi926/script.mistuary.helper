@@ -136,3 +136,12 @@ def build_search_url(base_url: str, media_type: str, query: str, offset: int = 0
 def build_browse_url(base_url: str, item_id: str) -> str:
     """拼一个浏览 URL，给「未同步内容的季/集列表」用。"""
     return "%s?mode=browse&id=%s" % (base_url, item_id)
+
+
+def build_similar_url(base_url: str, media_type: str, dbid: str,
+                      item_id: str = "") -> str:
+    """拼相似影片 URL。`dbid` 是 Kodi 库 id；Emby 动态条目再补 `id`。"""
+    url = "%s?mode=similar&type=%s&dbid=%s" % (base_url, media_type, dbid)
+    if item_id:
+        url += "&id=%s" % item_id
+    return url

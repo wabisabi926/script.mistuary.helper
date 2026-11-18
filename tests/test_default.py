@@ -112,6 +112,21 @@ class ActionDispatchTest(unittest.TestCase):
         )
         self.assertEqual(plugin.calls, [])
 
+    def test_similar_mode_is_closed(self):
+        """mode=similar 也是目录调用，必须收尾并只调用一次渲染。"""
+        plugin = _FakeXbmcPlugin()
+        with mock.patch("lib.emby.render_similar") as render:
+            self._run(
+                [
+                    "plugin://script.mistuary.helper/",
+                    "12",
+                    "?mode=similar&type=movie&dbid=5",
+                ],
+                plugin,
+            )
+        render.assert_called_once()
+        self.assertEqual(plugin.calls, [(12, True, False)])
+
 
 if __name__ == "__main__":
     unittest.main()

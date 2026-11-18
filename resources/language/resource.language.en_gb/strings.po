@@ -348,3 +348,6 @@ msgctxt "#32155"
 msgid "Nothing to show here"
 msgstr "Nothing to show here"
 
+msgctxt "#32156"
+msgid "No similar titles found"
+msgstr "No similar titles found"
