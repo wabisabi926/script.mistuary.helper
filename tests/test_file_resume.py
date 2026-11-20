@@ -130,10 +130,44 @@ class AutoTransitionTest(unittest.TestCase):
             None, "D:/a.mkv", 1000))
 
 
+class PromptModeTest(unittest.TestCase):
+    def test_defaults_to_ask(self):
+        for value in ("", None, "bogus", "  "):
+            self.assertEqual(file_resume.prompt_mode(value), "ask")
+
+    def test_case_insensitive(self):
+        self.assertEqual(file_resume.prompt_mode("ASK"), "ask")
+        self.assertEqual(file_resume.prompt_mode(" Continue "), "continue")
+
+    def test_valid_modes(self):
+        self.assertEqual(file_resume.prompt_mode("continue"), "continue")
+        self.assertEqual(file_resume.prompt_mode("off"), "off")
+
+
+class DialogResultTest(unittest.TestCase):
+    def test_choice_wins(self):
+        self.assertEqual(file_resume.dialog_result("start", True, True), "start")
+        self.assertEqual(file_resume.dialog_result("cancel", True, True), "cancel")
+
+    def test_missing_skin_falls_back(self):
+        self.assertEqual(file_resume.dialog_result("", False, False), "fallback")
+
+    def test_timeout_continues(self):
+        self.assertEqual(file_resume.dialog_result("", True, True), "continue")
+
+    def test_back_cancels(self):
+        self.assertEqual(file_resume.dialog_result("", True, False), "cancel")
+
+
 class I18nFallbackTest(unittest.TestCase):
     def test_dialog_labels(self):
         self.assertEqual(file_resume.i18n.t(32075), "从头播放")
         self.assertEqual(file_resume.i18n.t(32082, "01:07"), "从 01:07 继续播放")
+
+    def test_prompt_mode_labels(self):
+        for key in (32109, 32110, 32111, 32112, 32113):
+            with self.subTest(key=key):
+                self.assertNotEqual(file_resume.i18n.t(key), str(key))
 
 
 class EligibilityTest(unittest.TestCase):

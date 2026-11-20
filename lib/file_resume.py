@@ -23,6 +23,13 @@ import xml.etree.ElementTree as ElementTree
 from lib import i18n, log
 
 SETTING_ENABLED = "file_resume"
+SETTING_PROMPT = "file_resume_prompt"
+PROMPT_ASK = "ask"
+PROMPT_CONTINUE = "continue"
+PROMPT_OFF = "off"
+PROMPT_MODES = (PROMPT_ASK, PROMPT_CONTINUE, PROMPT_OFF)
+# 弹窗没人操作时的等待上限；超时按「继续播放」处理，不再当成取消停播。
+DIALOG_TIMEOUT_SECONDS = 180
 
 SAMPLE_SECONDS = 30
 MIRROR_SECONDS = 300
@@ -113,6 +120,27 @@ def percent_key(percent) -> str:
     except (TypeError, ValueError):
         value = 0
     return "%03d" % value
+
+
+def prompt_mode(value) -> str:
+    """续播询问方式；空值/未知值都按默认「询问」。"""
+    text = str(value or "").strip().casefold()
+    return text if text in PROMPT_MODES else PROMPT_ASK
+
+
+def dialog_result(choice, seen, timed_out) -> str:
+    """1115 的结果判定。
+
+    用户选过就用用户的选择；皮肤没有 1115 走原生兜底；
+    窗口还开着直到超时算「继续播放」；开着时被关掉（返回键）才算取消。
+    """
+    if choice in ("continue", "start", "cancel"):
+        return choice
+    if not seen:
+        return "fallback"
+    if timed_out:
+        return "continue"
+    return "cancel"
 
 
 def is_eligible_path(path, allow_http=False) -> bool:
@@ -910,10 +938,20 @@ class FileResumeManager:
 
         import xbmc
 
-        started = time.time()
+        mode = prompt_mode(_setting_string(SETTING_PROMPT, PROMPT_ASK))
         player = xbmc.Player()
         if not player.isPlaying():
             return
+        if mode == PROMPT_OFF:
+            log.info("file resume prompt skipped (off): pos=%.1f" % position)
+            return
+        if mode == PROMPT_CONTINUE:
+            player.seekTime(position)
+            log.info("file resume auto continue: pos=%.1f total=%.0f"
+                     % (position, record_total))
+            return
+
+        started = time.time()
         # 先冻住画面再问：等价于“先弹窗、再播放”，避免背后先走半秒。
         if not xbmc.getCondVisibility("Player.Paused"):
             xbmc.executebuiltin("PlayerControl(Pause)")
@@ -955,8 +993,9 @@ class FileResumeManager:
             start = time.time()
             if started:
                 log.info("resume dialog requested after %.2fs" % (start - started))
-            deadline = start + 60
+            deadline = start + DIALOG_TIMEOUT_SECONDS
             seen = False
+            timed_out = False
             choice = ""
             while time.time() < deadline:
                 active = bool(xbmc.getCondVisibility("Window.IsActive(1115)"))
@@ -973,23 +1012,27 @@ class FileResumeManager:
                 if seen and not active:
                     break
                 xbmc.sleep(100)
+            else:
+                timed_out = True
             try:
                 xbmc.executebuiltin("Dialog.Close(1115)")
             except Exception:  # noqa: BLE001
                 pass
-            if choice:
-                return choice
-            if not seen:
+            result = dialog_result(choice, seen, timed_out)
+            if result == "fallback":
                 # 别的地方用这个 helper / 皮肤没有 1115：退回原生 yes/no。
                 # yesno 默认聚焦 No；让 No = 继续播放，行为与紧凑弹窗一致。
-                result = xbmcgui.Dialog().yesno(
+                answer = xbmcgui.Dialog().yesno(
                     i18n.t(32072),
                     i18n.t(32073, format_dialog_time(position)),
                     nolabel=i18n.t(32074),
                     yeslabel=i18n.t(32075),
                 )
-                return "start" if result else "continue"
-            return "cancel"
+                return "start" if answer else "continue"
+            if timed_out:
+                log.info("resume dialog timed out after %ds, continue"
+                         % DIALOG_TIMEOUT_SECONDS)
+            return result
         except Exception as exc:  # noqa: BLE001
             log.error("file resume dialog failed: %s" % exc)
             return "continue"

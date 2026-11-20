@@ -91,6 +91,18 @@
                     <default>true</default>
                     <control type="toggle"/>
                 </setting>
+                <setting id="file_resume_prompt" type="string" label="32109" help="32110">
+                    <level>0</level>
+                    <default>ask</default>
+                    <control type="spinner" format="string"/>
+                    <constraints>
+                        <options>
+                            <option label="32111">ask</option>
+                            <option label="32112">continue</option>
+                            <option label="32113">off</option>
+                        </options>
+                    </constraints>
+                </setting>
                 <setting id="file_resume_ttl_days" type="string" label="32083" help="32084">
                     <level>0</level>
                     <default>90</default>

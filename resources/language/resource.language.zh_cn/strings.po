@@ -328,6 +328,26 @@ msgctxt "#32108"
 msgid "Maintenance"
 msgstr "记录维护"
 
+msgctxt "#32109"
+msgid "Resume prompt"
+msgstr "续播询问方式"
+
+msgctxt "#32110"
+msgid "Ask: show the dialog; Auto: jump to the saved position; Off: always start from the beginning"
+msgstr "询问：弹窗选择；自动继续：直接跳到上次位置；不询问：每次从头播放"
+
+msgctxt "#32111"
+msgid "Ask (default)"
+msgstr "询问（默认）"
+
+msgctxt "#32112"
+msgid "Auto continue"
+msgstr "自动继续"
+
+msgctxt "#32113"
+msgid "Off (start over)"
+msgstr "不询问（从头播放）"
+
 msgctxt "#32150"
 msgid "Sync library covers"
 msgstr "同步媒体库封面"

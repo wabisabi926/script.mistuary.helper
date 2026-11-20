@@ -328,6 +328,26 @@ msgctxt "#32108"
 msgid "Maintenance"
 msgstr "Maintenance"
 
+msgctxt "#32109"
+msgid "Resume prompt"
+msgstr "Resume prompt"
+
+msgctxt "#32110"
+msgid "Ask: show the dialog; Auto: jump to the saved position; Off: always start from the beginning"
+msgstr "Ask: show the dialog; Auto: jump to the saved position; Off: always start from the beginning"
+
+msgctxt "#32111"
+msgid "Ask (default)"
+msgstr "Ask (default)"
+
+msgctxt "#32112"
+msgid "Auto continue"
+msgstr "Auto continue"
+
+msgctxt "#32113"
+msgid "Off (start over)"
+msgstr "Off (start over)"
+
 msgctxt "#32150"
 msgid "Sync library covers"
 msgstr "Sync library covers"
