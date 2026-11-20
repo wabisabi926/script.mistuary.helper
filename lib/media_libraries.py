@@ -8,16 +8,25 @@
 
 不做的事：
 - 不解析 E4K 注入的 `emby-for-kodi-next-gen-*` 源（它是 Emby 库，不是本地库）；
+- 不写任何库数据；只读 MyVideos 的 `path` 表拿「源 → 内容类型」；
 - 不把 source 路径改写/library node（官方内核没有对应虚拟节点）；
 - 不在数据层 import xbmc，纯函数可直接单测。
 
 点击卡片进入的是对应视频源。若该源已刮削进 Kodi 库，仍能在文件视图里
 看到刮削信息；这是官方内核上不依赖魔改的最稳路径。
+
+类型来源：Kodi 新增视频源时选的「电影/电视剧」存在 `MyVideos*.db` 的
+`path.strContent`（JSON-RPC 没有读取接口）。源没设过类型时归为「未分类」，
+只在 `type=movies` 行里兜底出现，避免两页重复。
 """
 
 from __future__ import annotations
 
 import os
+import re
+import sqlite3
+import urllib.parse
+from pathlib import Path
 import xml.etree.ElementTree as ET
 
 from lib import config, library_icons, log
@@ -25,6 +34,90 @@ from lib import config, library_icons, log
 EMBY_SOURCE_PREFIX = "emby-for-kodi-next-gen-"
 # 兼容源被改名但路径还是 E4K 注入路径的情况；普通本地源不会命中。
 EMBY_PATH_MARKERS = ("/emby_addon_mode/", "127.0.0.1:57342")
+# Kodi 视频源可选的内容类型里，本插件只关心这两种。
+VIDEO_CONTENTS = ("movies", "tvshows")
+_DB_NAME = re.compile(r"^myvideos(\d+)\.db$", re.IGNORECASE)
+
+
+def video_db_path(profile: str | None = None) -> str:
+    """当前版本的 MyVideos*.db；没有就返回空。"""
+    folder = os.path.join(profile or config.profile_dir(), "Database")
+    try:
+        names = os.listdir(folder)
+    except OSError:
+        return ""
+    best = None
+    best_version = -1
+    for name in names:
+        match = _DB_NAME.match(name)
+        if match and int(match.group(1)) > best_version:
+            best, best_version = name, int(match.group(1))
+    return os.path.join(folder, best) if best else ""
+
+
+def normalize_source_path(path: str) -> str:
+    """比较用：反斜杠转正斜杠、折叠重复斜杠、去尾斜杠、大小写归一。"""
+    text = (path or "").strip().replace("\\", "/")
+    if "://" in text:
+        scheme, rest = text.split("://", 1)
+        text = scheme.lower() + "://" + re.sub(r"/+", "/", rest)
+    else:
+        text = re.sub(r"/+", "/", text)
+    return text.rstrip("/").casefold()
+
+
+def library_content_map(profile: str | None = None) -> list[tuple[str, str]]:
+    """只读 MyVideos 的 path 表，返回 [(归一化源路径, movies|tvshows)]。"""
+    db_path = video_db_path(profile)
+    if not db_path:
+        return []
+    try:
+        uri = Path(db_path).resolve().as_uri() + "?mode=ro"
+    except (OSError, ValueError):
+        return []
+    try:
+        con = sqlite3.connect(uri, uri=True, timeout=3.0)
+        try:
+            rows = con.execute(
+                "SELECT strPath, strContent FROM path "
+                "WHERE strContent IN ('movies','tvshows')"
+            ).fetchall()
+        finally:
+            con.close()
+    except (sqlite3.Error, OSError):
+        return []
+    return [(normalize_source_path(path), content)
+            for path, content in rows if path]
+
+
+def classify_source(path: str, rows) -> set[str]:
+    """一个源包含哪些内容类型。
+
+    优先按「源在某个已分类目录之下」找最长前缀；
+    源是父目录时，收集其下所有已分类子目录的类型。
+    """
+    key = normalize_source_path(path)
+    if not key:
+        return set()
+    ancestors = [(len(prefix), content) for prefix, content in rows
+                 if key == prefix or key.startswith(prefix + "/")]
+    if ancestors:
+        longest = max(size for size, _ in ancestors)
+        return {content for size, content in ancestors if size == longest}
+    return {content for prefix, content in rows
+            if prefix.startswith(key + "/")}
+
+
+def filter_sources(items, rows, media_type: str):
+    """按请求的媒体类型过滤；未设类型的源只留在 movies 行。"""
+    if media_type not in VIDEO_CONTENTS:
+        return list(items)
+    result = []
+    for item in items:
+        kinds = classify_source(item.get("path", ""), rows)
+        if media_type in kinds or (not kinds and media_type == "movies"):
+            result.append(item)
+    return result
 
 
 def sources_path(profile: str | None = None) -> str:
@@ -81,9 +174,13 @@ def render_libraries(handle: int, base_url: str, req, profile: str | None = None
     import xbmcgui
     import xbmcplugin
 
+    media_type = (getattr(req, "type", "") or "").strip().lower()
     items = local_sources(profile)
-    log.info("media libraries: %d local video source(s), type=%s"
-             % (len(items), getattr(req, "type", "")))
+    total = len(items)
+    if media_type in VIDEO_CONTENTS:
+        items = filter_sources(items, library_content_map(profile), media_type)
+    log.info("media libraries: %d/%d local video source(s), type=%s"
+             % (len(items), total, media_type))
 
     try:
         xbmcplugin.setContent(handle, "videos")
