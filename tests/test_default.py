@@ -58,6 +58,9 @@ class _FakeXbmcPlugin(object):
     def __init__(self):
         self.calls = []
 
+    def setContent(self, handle, content):
+        pass
+
     def endOfDirectory(self, handle, succeeded=True, cacheToDisc=True):
         self.calls.append((handle, succeeded, cacheToDisc))
 
@@ -111,6 +114,21 @@ class ActionDispatchTest(unittest.TestCase):
             plugin,
         )
         self.assertEqual(plugin.calls, [])
+
+    def test_libraries_mode_is_closed(self):
+        """mode=libraries 也是目录调用，必须收尾并只调用一次渲染。"""
+        plugin = _FakeXbmcPlugin()
+        with mock.patch("lib.media_libraries.render_libraries") as render:
+            self._run(
+                [
+                    "plugin://script.mistuary.helper/",
+                    "12",
+                    "?mode=libraries&type=movies",
+                ],
+                plugin,
+            )
+        render.assert_called_once()
+        self.assertEqual(plugin.calls, [(12, True, False)])
 
     def test_similar_mode_is_closed(self):
         """mode=similar 也是目录调用，必须收尾并只调用一次渲染。"""

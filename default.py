@@ -57,6 +57,15 @@ def main():
         xbmcplugin.endOfDirectory(HANDLE, succeeded=True, cacheToDisc=False)
         return
 
+    if req.mode == "libraries":
+        # 纯本地刮削库的「媒体库」行：只列 sources.xml 的 video source。
+        # E4K 环境皮肤仍走原来的 videodb://movies/tags/，不经过这里。
+        from lib import media_libraries
+
+        media_libraries.render_libraries(HANDLE, BASE_URL, req)
+        xbmcplugin.endOfDirectory(HANDLE, succeeded=True, cacheToDisc=False)
+        return
+
     if req.action == "rating":
         # M2：写豆瓣评分窗口属性。
         from lib import douban
