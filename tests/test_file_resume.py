@@ -159,6 +159,52 @@ class DialogResultTest(unittest.TestCase):
         self.assertEqual(file_resume.dialog_result("", True, False), "cancel")
 
 
+class SetPausedTest(unittest.TestCase):
+    """PlayerControl(Pause) 在 Kodi 里不是合法命令（未知参数被忽略），
+    暂停必须走 JSON-RPC Player.PlayPause。"""
+
+    def setUp(self):
+        self.calls = []
+        self.active = [{"playerid": 1, "type": "video"}]
+
+        def fake_rpc(method, params=None):
+            self.calls.append((method, params))
+            if method == "Player.GetActivePlayers":
+                return {"result": self.active}
+            return {"result": "OK"}
+
+        self.patch = mock.patch.object(file_resume, "_jsonrpc", side_effect=fake_rpc)
+        self.patch.start()
+
+    def tearDown(self):
+        self.patch.stop()
+
+    def test_pause_sends_play_false(self):
+        self.assertTrue(file_resume._set_paused(True))
+        self.assertEqual(self.calls[-1],
+                         ("Player.PlayPause", {"playerid": 1, "play": False}))
+
+    def test_resume_sends_play_true(self):
+        self.assertTrue(file_resume._set_paused(False))
+        self.assertEqual(self.calls[-1],
+                         ("Player.PlayPause", {"playerid": 1, "play": True}))
+
+    def test_no_video_player(self):
+        self.active = [{"playerid": 2, "type": "audio"}]
+        self.assertFalse(file_resume._set_paused(True))
+        self.assertEqual([c[0] for c in self.calls], ["Player.GetActivePlayers"])
+
+    def test_rpc_error_returns_false(self):
+        self.patch.stop()
+        with mock.patch.object(file_resume, "_jsonrpc",
+                               return_value={"error": {"code": -1}}):
+            self.assertFalse(file_resume._set_paused(True))
+
+    def test_no_invalid_playercontrol_pause(self):
+        import inspect
+        self.assertNotIn("PlayerControl(Pause)", inspect.getsource(file_resume))
+
+
 class I18nFallbackTest(unittest.TestCase):
     def test_dialog_labels(self):
         self.assertEqual(file_resume.i18n.t(32075), "从头播放")

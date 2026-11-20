@@ -507,6 +507,23 @@ def _player_item():
     return {}
 
 
+def _video_player_id():
+    active = _jsonrpc("Player.GetActivePlayers", {})
+    for row in (active.get("result") or []):
+        if row.get("type") == "video":
+            return row.get("playerid", 1)
+    return None
+
+
+def _set_paused(paused: bool) -> bool:
+    """PlayerControl 没有 pause 命令（未知参数被忽略），暂停只能走 JSON-RPC。"""
+    playerid = _video_player_id()
+    if playerid is None:
+        return False
+    data = _jsonrpc("Player.PlayPause", {"playerid": playerid, "play": not paused})
+    return not data.get("error")
+
+
 def _from_filemanager() -> bool:
     try:
         import xbmc
@@ -953,8 +970,9 @@ class FileResumeManager:
 
         started = time.time()
         # 先冻住画面再问：等价于“先弹窗、再播放”，避免背后先走半秒。
+        paused_by_us = False
         if not xbmc.getCondVisibility("Player.Paused"):
-            xbmc.executebuiltin("PlayerControl(Pause)")
+            paused_by_us = _set_paused(True)
             xbmc.sleep(120)
         log.info("resume pause done after %.2fs" % (time.time() - started))
         choice = self._show_resume_dialog(position, started)
@@ -972,8 +990,8 @@ class FileResumeManager:
             # 从头开始 = 删记录 + 明确回到 0；暂停时播放器可能已停在旧位置
             self._clear_resume(path, record_total)
             player.seekTime(0)
-        if xbmc.getCondVisibility("Player.Paused"):
-            xbmc.executebuiltin("PlayerControl(Play)")
+        if paused_by_us:
+            _set_paused(False)
 
     def _show_resume_dialog(self, position, started=None):
         """打开皮肤 1115 紧凑弹窗；返回 continue / start / cancel。"""
