@@ -157,20 +157,20 @@ msgid "Playlist completion"
 msgstr "Playlist completion"
 
 msgctxt "#32061"
-msgid "Append the rest of the season when a library episode starts; playback is not interrupted."
-msgstr "Append the rest of the season when a library episode starts; playback is not interrupted."
+msgid "When a library episode starts, queue the rest of the season; playback is not interrupted."
+msgstr "When a library episode starts, queue the rest of the season; playback is not interrupted."
 
 msgctxt "#32063"
-msgid "Library episodes: rest of season"
-msgstr "Library episodes: rest of season"
+msgid "Rest of season"
+msgstr "Rest of season"
 
 msgctxt "#32064"
-msgid "Folder playback: rest of folder"
-msgstr "Folder playback: rest of folder"
+msgid "Rest of folder"
+msgstr "Rest of folder"
 
 msgctxt "#32065"
-msgid "Append the rest of the folder when playback starts from a folder; playback is not interrupted."
-msgstr "Append the rest of the folder when playback starts from a folder; playback is not interrupted."
+msgid "When playback starts from a folder, queue the rest of the folder; playback is not interrupted."
+msgstr "When playback starts from a folder, queue the rest of the folder; playback is not interrupted."
 
 msgctxt "#32066"
 msgid "Fall back to the public API when no rating"
@@ -181,20 +181,20 @@ msgid "Fetch from the public API when StrmAssistant has no rating. One extra req
 msgstr "Fetch from the public API when StrmAssistant has no rating. One extra request on first view."
 
 msgctxt "#32068"
-msgid "Episodes: continue to next season"
-msgstr "Episodes: continue to next season"
+msgid "Next season"
+msgstr "Next season"
 
 msgctxt "#32069"
-msgid "When the last episode of a season starts, queue the first episode of the next season. Works with 'rest of season'."
-msgstr "When the last episode of a season starts, queue the first episode of the next season. Works with 'rest of season'."
+msgid "When the last episode of a season starts, queue the first episode of the next season; use with Rest of season."
+msgstr "When the last episode of a season starts, queue the first episode of the next season; use with Rest of season."
 
 msgctxt "#32070"
 msgid "File playback resume"
 msgstr "File playback resume"
 
 msgctxt "#32071"
-msgid "Remember the playback position of videos in the file manager and continue from it next time."
-msgstr "Remember the playback position of videos in the file manager and continue from it next time."
+msgid "Remember the playback position of file-manager videos and prompt to continue."
+msgstr "Remember the playback position of file-manager videos and prompt to continue."
 
 msgctxt "#32072"
 msgid "Playback record"
@@ -333,8 +333,8 @@ msgid "Resume prompt"
 msgstr "Resume prompt"
 
 msgctxt "#32110"
-msgid "Ask: show the dialog; Auto: jump to the saved position; Off: always start from the beginning"
-msgstr "Ask: show the dialog; Auto: jump to the saved position; Off: always start from the beginning"
+msgid "Ask: show the dialog; Auto: jump to the saved position; Off: always start from the beginning."
+msgstr "Ask: show the dialog; Auto: jump to the saved position; Off: always start from the beginning."
 
 msgctxt "#32111"
 msgid "Ask (default)"
@@ -353,8 +353,8 @@ msgid "Sync library covers"
 msgstr "Sync library covers"
 
 msgctxt "#32151"
-msgid "Save Emby library covers locally so the home screen can show them by library name"
-msgstr "Save Emby library covers locally so the home screen can show them by library name"
+msgid "Sync library covers from Emby; file names must match library names."
+msgstr "Sync library covers from Emby; file names must match library names."
 
 msgctxt "#32152"
 msgid "Library covers updated: {0} saved, {1} skipped, {2} failed"
